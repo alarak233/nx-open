@@ -60,7 +60,7 @@ extern DllExport void ufsta( char *param, int *returnCode, int rlen )
     }
     
     /* TODO: Add your application code here */
-	uc1601("hello world!", 1);
+	uc1601("≤‚ ‘÷–Œƒ", 1);
     /* Terminate the API environment */
     UF_CALL(UF_terminate());
 }
