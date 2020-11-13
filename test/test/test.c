@@ -61,6 +61,21 @@ extern DllExport void ufsta( char *param, int *returnCode, int rlen )
     
     /* TODO: Add your application code here */
 	uc1601("测试中文", 1);
+	logical Is_open;
+	UF_UI_is_listing_window_open(&Is_open);
+	if (!Is_open) UF_UI_open_listing_window();
+	UF_UI_write_listing_window("第一次写入信息窗口的信息\n");
+	uc1601("将要关闭信息窗口", 1);
+	UF_UI_close_listing_window();
+	uc1601("将要显示信息窗口", 1);
+	UF_UI_open_listing_window();
+	UF_UI_write_listing_window("第二次写入信息窗口的信息\n");
+	uc1601("将要退出信息窗口", 1);
+	UF_UI_exit_listing_window();
+	uc1601("将要显示信息窗口", 1);
+	UF_UI_open_listing_window();
+	UF_UI_write_listing_window("第三次写入信息窗口的信息\n");
+	UF_UI_save_listing_window("D:\\Info.txt");
     /* Terminate the API environment */
     UF_CALL(UF_terminate());
 }
