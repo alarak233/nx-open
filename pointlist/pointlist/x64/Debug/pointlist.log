@@ -1,2 +1,3 @@
 ﻿  pointlist.c
+d:\nxopen\pointlist\pointlist\pointlist.c(72): warning C4101: “pointSetTag”: 未引用的局部变量
   pointlist.vcxproj -> D:\nxopen\pointlist\x64\Debug\pointlist.dll

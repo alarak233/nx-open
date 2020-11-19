@@ -16,6 +16,7 @@
 #include <uf_point.h>
 #include <uf_curve.h>
 #include <uf_so.h>
+#include <uf_modl_curves.h>
 
 static void ECHO(char *format, ...)
 {
@@ -67,20 +68,47 @@ extern DllExport void ufusr( char *parm, int *returnCode, int rlen )
 	tag_t lineTag = NULL_TAG;
 	tag_t pointTag = NULL_TAG;
 	tag_t basePointTag = NULL_TAG;
-	tag_t scalar = NULL_TAG;
+	tag_t scalarTag = NULL_TAG;
+	tag_t *pointSetTag;
+	double *pointSet;
+	int i;
+	int j;
+	double ctol,atol,stol;
+	ctol = 0.000001;
+	atol = 0.000001;
+	stol = 1.0/80;
+	int pointNum;
+	char chr[50];
 	double basePoint[3] = { 0.0,0.0,0.0 };
 	UF_CURVE_line_t line;
-	UF_SO_set_double_of_scalar(scalar, 1);
-	UF_CURVE_create_point(basePoint, &basePointTag);
+	UF_CURVE_create_point(&basePoint[0], &basePointTag);
 	line.start_point[0] = 0.0;
 	line.start_point[1] = 0.0;
 	line.start_point[2] = 0.0;
-	line.end_point[0] = 20.0;
+	line.end_point[0] = 40.0;
 	line.end_point[1] = 0.0;
-	line.end_point[2] = 5.0;
+	line.end_point[2] = 30.0;
 	UF_CURVE_create_line(&line, &lineTag);
-	UF_POINT_create_along_curve(lineTag, basePointTag, scalar, UF_SO_point_along_curve_distance, FALSE, &pointTag);
-	uc1601("", 1);
+	UF_MODL_ask_curve_points(lineTag,ctol,atol,stol,&pointNum,&pointSet);
+	UF_UI_open_listing_window();
+	sprintf(chr, "%d\n ", pointNum);
+	UF_UI_write_listing_window(chr);
+	for (i = 0; i < 3 * pointNum; i += 3)
+	{
+		UF_UI_write_listing_window("The points are:");
+		sprintf(chr, "%.4f ", pointSet[i]);
+		UF_UI_write_listing_window(chr);
+		sprintf(chr, "%.4f ", pointSet[i+1]);
+		UF_UI_write_listing_window(chr);
+		sprintf(chr, "%.4f \n", pointSet[i+2]);
+		UF_UI_write_listing_window(chr);
+	}
+	for (i = 0;i<pointNum;i++)
+	{
+		for (j = 0; j < 3; j++)
+			basePoint[j] = pointSet[3 * i + j];
+		UF_CURVE_create_point(basePoint,&basePointTag);
+	}
 
     /* Terminate the API environment */
     UF_CALL(UF_terminate());
