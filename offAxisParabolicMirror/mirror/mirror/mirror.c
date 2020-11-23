@@ -115,7 +115,7 @@ extern DllExport void ufusr( char *parm, int *returnCode, int rlen )
 	}
 
 //测试对话框
-	
+/*
 	char charData[5][16];
 	int i = 1;
 	UF_UI_open_listing_window();
@@ -125,9 +125,11 @@ extern DllExport void ufusr( char *parm, int *returnCode, int rlen )
 		UF_UI_write_listing_window(charData[i]);
 		UF_UI_write_listing_window("\n");
 	}
-	
+*/
 
 	/*3.判断工装类型（吸盘式，螺丝固定）*/
+	int isSucker = 1;
+	
 
 	/*4.选择文件夹，创建新部件工件*/
 
