@@ -10,6 +10,7 @@
 /* Include files */
 #include <stdarg.h>
 #include <stdio.h>
+#include <string.h>
 #include <uf.h>
 #include <uf_ui_types.h>
 #include <uf_ui.h>
@@ -62,12 +63,69 @@ extern DllExport void ufusr( char *parm, int *returnCode, int rlen )
     
     /* TODO: Add your application code here */
 	/*1.选择反射镜形状（圆形，方形）*/
+	
+	int isCircle = 5;	//uc1603返回值5-18
+	char shape[2][38] = {"圆形","方形"};
+	isCircle = uc1603("请选择抛物镜形状",0,shape,2);
+	if (isCircle == 1 || isCircle == 2)
+		UF_CALL(UF_terminate());
 
+//	测试对话框
+/*	
+	char charIsCircle[30];
+	UF_UI_open_listing_window();
+	if (isCircle == 5)
+	{
+		UF_UI_write_listing_window("圆形\n");
+	}
+	else if (isCircle == 6)
+	{
+		UF_UI_write_listing_window("方形\n");
+	}
+	sprintf(charIsCircle, "%d", isCircle);
+	UF_UI_write_listing_window(charIsCircle);
+*/
 	/*2.输入所需的参数：
 		1）.离轴距离d
 		2）.抛物线关键参数y=1/2p*x^2
 		3）.反射镜高度h或反射镜中心高度ho
 		4）.反射镜底面大小（圆形r，方形a，b，其他类型自改）*/
+
+	double d,p,h,r,a,b;
+	char circleSize[4][16] = { "离轴距离","焦距(p)y=1/px^2","总高度","底部半径" };
+	char squareSize[5][16] = { "离轴距离","焦距(p)y=1/px^2","总高度","长（沿轴向）","宽（垂直轴向）" };
+	double data[5] = { 0,0,0,0,0 };
+	int *unused = 0;
+	if (isCircle == 5)
+	{
+		uc1609("请输入尺寸", circleSize, 4, data, unused);
+		d = data[0];
+		p = data[1] / 2;
+		h = data[2];
+		r = data[3];
+	}
+	else
+	{
+		uc1609("请输入尺寸", squareSize, 5, data, unused);
+		d = data[0];
+		p = data[1] / 2;
+		h = data[2];
+		a = data[3];
+		b = data[4];
+	}
+
+//测试对话框
+	
+	char charData[5][16];
+	int i = 1;
+	UF_UI_open_listing_window();
+	for ( i = 0; i < 5; i++)
+	{
+		sprintf(charData[i], "%f", data[i]);
+		UF_UI_write_listing_window(charData[i]);
+		UF_UI_write_listing_window("\n");
+	}
+	
 
 	/*3.判断工装类型（吸盘式，螺丝固定）*/
 
