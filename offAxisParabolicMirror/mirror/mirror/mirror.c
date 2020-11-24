@@ -14,6 +14,9 @@
 #include <uf.h>
 #include <uf_ui_types.h>
 #include <uf_ui.h>
+#include <uf_part.h>
+#include <direct.h> 
+#include <uf_modl.h>
 
 static void ECHO(char *format, ...)
 {
@@ -62,6 +65,12 @@ extern DllExport void ufusr( char *parm, int *returnCode, int rlen )
     }
     
     /* TODO: Add your application code here */
+	/*全局变量*/
+
+//	int response;
+	int units = UF_PART_METRIC;//公制单位
+	int i = 0;
+
 	/*1.选择反射镜形状（圆形，方形）*/
 	
 	int isCircle = 5;	//uc1603返回值5-18
@@ -94,7 +103,7 @@ extern DllExport void ufusr( char *parm, int *returnCode, int rlen )
 	double d,p,h,r,a,b;
 	char circleSize[4][16] = { "离轴距离","焦距(p)y=1/px^2","总高度","底部半径" };
 	char squareSize[5][16] = { "离轴距离","焦距(p)y=1/px^2","总高度","长（沿轴向）","宽（垂直轴向）" };
-	double data[5] = { 0,0,0,0,0 };
+	double data[5] = { 127,254,25.4,12.7,12.7 };
 	int *unused = 0;
 	if (isCircle == 5)
 	{
@@ -114,7 +123,7 @@ extern DllExport void ufusr( char *parm, int *returnCode, int rlen )
 		b = data[4];
 	}
 
-//测试对话框
+//	测试对话框
 /*
 	char charData[5][16];
 	int i = 1;
@@ -128,13 +137,71 @@ extern DllExport void ufusr( char *parm, int *returnCode, int rlen )
 */
 
 	/*3.判断工装类型（吸盘式，螺丝固定）*/
+	
 	int isSucker = 1;
+	if (d<68.2)
+	{
+		isSucker = 0;
+	}
 	
 
 	/*4.选择文件夹，创建新部件工件*/
 
+	char dirName[100];
+	sprintf(dirName, "C:\\Users\\72707\\Desktop\\F%.2f%s\\", d ,isCircle == 5?"圆形":"方形");
+	_mkdir(dirName);
+	char partName[100];
+	strcpy(partName, dirName);
+	strcat(partName, "mirror.prt");
+	tag_t partMirrorTag = NULL_TAG;
+	UF_PART_new(partName,units,&partMirrorTag);
+
 	/*5.在工件中建模*/
 
+	tag_t dTag, pTag, hTag, rTag, aTag, bTag, xTag, zTag, tTag;
+
+	char dChar[20], pChar[20], hChar[20], rChar[20], aChar[20], bChar[20];
+
+	sprintf(dChar, "d=%.5f", d);
+	sprintf(pChar, "p=%.5f", p);
+	sprintf(hChar, "h=%.5f", h);
+	sprintf(rChar, "r=%.5f", data[3]);
+	sprintf(aChar, "a=%.5f", data[3]);
+	sprintf(bChar, "b=%.5f", data[4]);
+
+	UF_MODL_create_exp_tag(dChar, &dTag);
+	UF_MODL_create_exp_tag(pChar, &pTag);
+	UF_MODL_create_exp_tag(hChar, &hTag);
+	UF_MODL_create_exp_tag(rChar, &rTag);
+	UF_MODL_create_exp_tag(aChar, &aTag);
+	UF_MODL_create_exp_tag(bChar, &bTag);
+	UF_MODL_create_exp_tag("t=1", &tTag);
+	UF_MODL_create_exp_tag("x=(t-0.5)*r*2+d", &xTag);
+	UF_MODL_create_exp_tag("z=1/(2*p)*x^2-1/(2*p)*(d+r)^2+h", &zTag);
+
+	tag_t cylinderTag = NULL_TAG;
+	tag_t *cylinderExpTag=NULL;
+	int cylinderExpNumber = 0;
+	UF_free(cylinderExpTag);
+	double cylinderOrgin[3] = { 0,0,0 };
+	double cylinderDirection[3] = { 0,0,1 };
+	cylinderOrgin[0] = d;
+	UF_MODL_create_cylinder(0,NULL_TAG,cylinderOrgin,"h","2*r",cylinderDirection,&cylinderTag);
+	UF_MODL_ask_exps_of_feature(cylinderTag, &cylinderExpNumber, &cylinderExpTag);
+
+//	测试对话框
+/*
+	char *cylinderExp;
+	UF_UI_open_listing_window();
+	for (i = 0; i < cylinderExpNumber; i++)
+	{
+		UF_MODL_ask_exp_tag_string(cylinderExpTag[i], &cylinderExp);
+		UF_UI_write_listing_window(cylinderExp);
+		UF_UI_write_listing_window("\n");
+	}
+*/
+
+	
 	/*6.创建新部件，工装*/
 
 	/*7.在工装中建模*/
