@@ -189,6 +189,7 @@ extern DllExport void ufusr( char *parm, int *returnCode, int rlen )
 	UF_MODL_create_cylinder(0,NULL_TAG,cylinderOrgin,"h","2*r",cylinderDirection,&cylinderTag);
 	UF_MODL_ask_exps_of_feature(cylinderTag, &cylinderExpNumber, &cylinderExpTag);
 
+
 //	≤‚ ‘∂‘ª∞øÚ
 /*
 	char *cylinderExp;
