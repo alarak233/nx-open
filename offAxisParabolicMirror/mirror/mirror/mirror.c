@@ -17,6 +17,7 @@
 #include <uf_part.h>
 #include <direct.h> 
 #include <uf_modl.h>
+#include <uf_csys.h>
 
 static void ECHO(char *format, ...)
 {
@@ -103,7 +104,7 @@ extern DllExport void ufusr( char *parm, int *returnCode, int rlen )
 	double d,p,h,r,a,b;
 	char circleSize[4][16] = { "离轴距离","焦距(p)y=1/px^2","总高度","底部半径" };
 	char squareSize[5][16] = { "离轴距离","焦距(p)y=1/px^2","总高度","长（沿轴向）","宽（垂直轴向）" };
-	double data[5] = { 127,254,25.4,12.7,12.7 };
+	double data[5] = { 127,254,31.75,12.7,12.7 };
 	int *unused = 0;
 	if (isCircle == 5)
 	{
@@ -158,6 +159,8 @@ extern DllExport void ufusr( char *parm, int *returnCode, int rlen )
 
 	/*5.在工件中建模*/
 
+//	创立参数化圆柱，但是圆柱自带参数不包含位置，以后可以尝试利用创建圆然后拉伸的方式来创建全参数圆柱。
+
 	tag_t dTag, pTag, hTag, rTag, aTag, bTag, xTag, zTag, tTag;
 
 	char dChar[20], pChar[20], hChar[20], rChar[20], aChar[20], bChar[20];
@@ -180,18 +183,17 @@ extern DllExport void ufusr( char *parm, int *returnCode, int rlen )
 	UF_MODL_create_exp_tag("z=1/(2*p)*x^2-1/(2*p)*(d+r)^2+h", &zTag);
 
 	tag_t cylinderTag = NULL_TAG;
-	tag_t *cylinderExpTag=NULL;
 	int cylinderExpNumber = 0;
-	UF_free(cylinderExpTag);
 	double cylinderOrgin[3] = { 0,0,0 };
 	double cylinderDirection[3] = { 0,0,1 };
 	cylinderOrgin[0] = d;
 	UF_MODL_create_cylinder(0,NULL_TAG,cylinderOrgin,"h","2*r",cylinderDirection,&cylinderTag);
-	UF_MODL_ask_exps_of_feature(cylinderTag, &cylinderExpNumber, &cylinderExpTag);
 
-
-//	测试对话框
+//	测试对话框，结果是圆柱只含两个表达式
 /*
+	tag_t *cylinderExpTag=NULL;
+	UF_free(cylinderExpTag);
+	UF_MODL_ask_exps_of_feature(cylinderTag, &cylinderExpNumber, &cylinderExpTag);
 	char *cylinderExp;
 	UF_UI_open_listing_window();
 	for (i = 0; i < cylinderExpNumber; i++)
@@ -202,7 +204,57 @@ extern DllExport void ufusr( char *parm, int *returnCode, int rlen )
 	}
 */
 
-	
+//	创建基于规律曲线的抛物线并旋转。
+
+//	测试规律曲线
+/*	测试规律曲线无法生成，暂时先用二次曲线代替
+	void *parabola;
+	UF_STRING_t null1, null2;
+	null1.dir = NULL;
+	null1.id = NULL;
+	null1.num = NULL;
+	null1.string = NULL;
+	null2.dir = NULL;
+	null1.id = NULL;
+	null1.num = NULL;
+	null1.string = NULL;
+	UF_MODL_create_law(1, "x=1,y=1,z=1", "", null1, null2, 0, NULL, NULL, NULL_TAG, 1, &parabola);
+*/
+//	使用二次曲线函数创建抛物线
+	double matrix[9] = { 0,0,1.0,1.0,0,0,0,1.0,0 };
+	tag_t matrixTag = NULL_TAG;
+	UF_CSYS_create_matrix(matrix, &matrixTag);
+
+
+	UF_CURVE_conic_t parabola;
+	tag_t parabolaTag;
+	parabola.matrix_tag = matrixTag;
+	parabola.conic_type = 3;
+	parabola.center[0] = -1.0 / (2.0 * p)*(d + r)*(d + r) + h;
+	parabola.center[1] = 0.0;
+	parabola.center[2] = 0.0;
+	parabola.k1 = 2 * p;
+	parabola.k2 = 0;
+	parabola.start_param = d - r;
+	parabola.end_param = d + r;
+	parabola.rotation_angle = 0;
+	UF_CURVE_create_conic(&parabola, &parabolaTag);
+
+//	创建回转体
+
+	UF_MODL_SWEEP_TRIM_object_t mirror;
+	char *limit[2] = { "0.0","360.0" };
+	char *offset[2] = { "0.0","0.0" };
+	double paraOrigin[3] = { 0.0,0.0,0.0 };
+	double axisPoints[3] = { 0.0, 0.0, 0.0 };
+	double axisDirection[3] = { 0.0,0.0,1.0 };
+	tag_t *mirrorTag = NULL_TAG;
+	int mirrorNum = 0;
+
+	UF_MODL_create_revolution(&parabolaTag, 1, &mirror, limit, offset, paraOrigin, false, true, axisPoints, axisDirection, UF_NEGATIVE, &mirrorTag, &mirrorNum);
+
+
+
 	/*6.创建新部件，工装*/
 
 	/*7.在工装中建模*/
