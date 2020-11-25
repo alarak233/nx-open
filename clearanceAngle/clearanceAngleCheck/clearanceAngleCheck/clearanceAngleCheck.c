@@ -43,7 +43,22 @@ static int report_error( char *file, int line, char *call, int irc)
 
     return(irc);
 }
-
+/*选取特定的特征过滤器初始化*/
+static int init_proc(UF_UI_selection_p_t select, void *user_data)
+{
+	int  errorCode = 0;
+	int numTriples = 1;
+	UF_UI_mask_t mask_triples[] = { UF_face_type,0,0};
+	errorCode = UF_UI_set_sel_mask(select,UF_UI_SEL_MASK_CLEAR_AND_ENABLE_SPECIFIC,numTriples, mask_triples);
+	if (errorCode == 0)
+	{
+		return UF_UI_SEL_SUCCESS;
+	}
+	else
+	{
+		return UF_UI_SEL_FAILURE;
+	}
+}
 
 /*****************************************************************************
 **  Activation Methods
@@ -51,18 +66,29 @@ static int report_error( char *file, int line, char *call, int irc)
 /*  Explicit Activation
 **      This entry point is used to activate the application explicitly, as in
 **      "File->Execute UG/Open->User Function..." */
-extern DllExport void ufusr( char *parm, int *returnCode, int rlen )
+extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 {
-    /* Initialize the API environment */
-    if( UF_CALL(UF_initialize()) ) 
-    {
-        /* Failed to initialize */
-        return;
-    }
-    
-    /* TODO: Add your application code here */
+	/* Initialize the API environment */
+	if (UF_CALL(UF_initialize()))
+	{
+		/* Failed to initialize */
+		return;
+	}
+
+	/* TODO: Add your application code here */
+
+	/*全局变量*/
+
+	int response;
 
 	/*1.选取目标面*/
+
+	tag_t baseSurfaceTag = NULL_TAG;
+	tag_t viewTag = NULL_TAG;
+	double cursor[3] = { 0.0,0.0,0.0 };
+	UF_UI_select_with_single_dialog("请选择目标面", "目标面", UF_UI_SEL_SCOPE_ANY_IN_ASSEMBLY, init_proc, NULL, &response, &baseSurfaceTag, cursor, &viewTag);
+
+
 
 	/*2.选取中心点*/
 
