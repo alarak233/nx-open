@@ -135,7 +135,7 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 	UF_MODL_ask_face_uv_minmax(baseSurfaceTag, uvMinMax);
 
 	char uvNumChar[2][16] = {"u向","v向"};
-	double uvNum[2] = { 11,11 };
+	double uvNum[2] = { 51,51 };
 	uc1609("请选择u向v向点个数", uvNumChar, 2, uvNum, 0);
 
 //	测试对话框是否有效
@@ -186,12 +186,15 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 	double curvatureRadius[2];
 	tag_t uvPointTag = NULL_TAG;
 	char uvPointChar[50];
+	int isPointOnSurface = 0;
 
 	//面上的点与中心连接所在平面法向量
 	double toolDirection[3] = { 0.0,0.0,0.0 };
 
 	//后角
 	double clearanceAngle;
+	double maxClearanceAngle = 0;
+	double minClearanceAngle = 0;
 
 	UF_UI_open_listing_window();
 
@@ -205,20 +208,33 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 			uvParameter[1] = (uvMinMax[3] - uvMinMax[2])*vt + uvMinMax[2];
 			UF_MODL_ask_face_props(baseSurfaceTag, uvParameter, uvPoint, uFirstDerivative, vFirstDerivative, uSecondDerivative, vSecondDerivative, normalDirection, curvatureRadius);
 			
-			//计算面上的点与中心连接所在平面的法向量
-			toolDirection[0] = uvPoint[1] - centralPoint[1];
-			toolDirection[1] = centralPoint[0] - uvPoint[0];
-
-			//计算后角
-			clearanceAngle = acos((toolDirection[0] * normalDirection[0] + toolDirection[1] * normalDirection[1] + toolDirection[2] * normalDirection[2]) / (sqrt(pow(toolDirection[0], 2) + pow(toolDirection[1], 2) + pow(toolDirection[2], 2))*sqrt(pow(normalDirection[0], 2) + pow(normalDirection[1], 2) + pow(normalDirection[2], 2))));
-			clearanceAngle = clearanceAngle > PI / 2 ? (clearanceAngle - PI / 2) : 0;
-			clearanceAngle = clearanceAngle / PI * 180;
+			//判断点是否在面上
+			UF_MODL_ask_point_containment(uvPoint, baseSurfaceTag, &isPointOnSurface);
 			
-			sprintf(uvPointChar, "%.4f %.4f %.4f %.4f \n", uvPoint[0], uvPoint[1], uvPoint[2], clearanceAngle);
-			UF_UI_write_listing_window(uvPointChar);
-			UF_CURVE_create_point(uvPoint, &uvPointTag);
+			if (isPointOnSurface==1)
+			{
+				//计算面上的点与中心连接所在平面的法向量
+				toolDirection[0] = uvPoint[1] - centralPoint[1];
+				toolDirection[1] = centralPoint[0] - uvPoint[0];
+
+				//计算后角
+				clearanceAngle = acos((toolDirection[0] * normalDirection[0] + toolDirection[1] * normalDirection[1] + toolDirection[2] * normalDirection[2]) / (sqrt(pow(toolDirection[0], 2) + pow(toolDirection[1], 2) + pow(toolDirection[2], 2))*sqrt(pow(normalDirection[0], 2) + pow(normalDirection[1], 2) + pow(normalDirection[2], 2))));
+				//clearanceAngle = clearanceAngle > PI / 2 ? clearanceAngle : PI-clearanceAngle ;
+				clearanceAngle = (clearanceAngle - PI / 2) / PI * 180;
+				maxClearanceAngle = clearanceAngle > maxClearanceAngle ? clearanceAngle : maxClearanceAngle;
+				minClearanceAngle = clearanceAngle < minClearanceAngle ? clearanceAngle : minClearanceAngle;
+
+				sprintf(uvPointChar, "%.4f %.4f %.4f %.4f \n", uvPoint[0], uvPoint[1], uvPoint[2], clearanceAngle);
+				UF_UI_write_listing_window(uvPointChar);
+				UF_CURVE_create_point(uvPoint, &uvPointTag);
+			}
 		}
 	}
+
+	sprintf(uvPointChar, "max clearance angle is %.4f  \n", maxClearanceAngle);
+	UF_UI_write_listing_window(uvPointChar);
+	sprintf(uvPointChar, "min clearance angle is %.4f  \n", minClearanceAngle);
+	UF_UI_write_listing_window(uvPointChar);	
 
 	/*5.后角可视化（生成对应点的后角生成的直线集合）*/
 
