@@ -126,9 +126,11 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 
 	/*3.选取切削方向（顺时针，逆时针）及点的分布（uv点数）*/
 
+/*	直接导出顺逆时针的两个值，不用选择了
 	char cuttingDirection[2][38] = { "顺时针","逆时针" };
 	int isClockwise = 5;
 	isClockwise = uc1603("请选择切削方向", 0, cuttingDirection, 2);
+*/
 
 //	创建面上的点所需要的uv参数为0-1，不需要查询面的参数（重构理由见下面）
 	double uvMinMax[4];
@@ -188,6 +190,10 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 	char uvPointChar[50];
 	int isPointOnSurface = 0;
 
+	//可视化用的直线
+	UF_CURVE_line_t line;
+	tag_t lineTag = NULL_TAG;
+
 	//面上的点与中心连接所在平面法向量
 	double toolDirection[3] = { 0.0,0.0,0.0 };
 
@@ -226,7 +232,18 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 
 				sprintf(uvPointChar, "%.4f %.4f %.4f %.4f \n", uvPoint[0], uvPoint[1], uvPoint[2], clearanceAngle);
 				UF_UI_write_listing_window(uvPointChar);
-				UF_CURVE_create_point(uvPoint, &uvPointTag);
+				//UF_CURVE_create_point(uvPoint, &uvPointTag);
+
+				//后角可视化
+				line.start_point[0] = uvPoint[0];
+				line.start_point[1] = uvPoint[1];
+				line.start_point[2] = -50;
+				line.end_point[0] = uvPoint[0];
+				line.end_point[1] = uvPoint[1];
+				line.end_point[2] = -50 + clearanceAngle * 10;
+
+				UF_CURVE_create_line(&line, &lineTag);
+
 			}
 		}
 	}
