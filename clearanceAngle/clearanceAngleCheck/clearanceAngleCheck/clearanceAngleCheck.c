@@ -13,6 +13,11 @@
 #include <uf.h>
 #include <uf_ui_types.h>
 #include <uf_ui.h>
+#include <uf_modl.h>
+#include <uf_so.h>
+#include <uf_point.h>
+#include <uf_curve.h>
+#include <math.h>
 
 static void ECHO(char *format, ...)
 {
@@ -80,6 +85,9 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 	/*全局变量*/
 
 	int response;
+	int i = 0;
+	int j = 0;
+	int k = 0;
 
 	/*1.选取目标面*/
 
@@ -88,13 +96,129 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 	double cursor[3] = { 0.0,0.0,0.0 };
 	UF_UI_select_with_single_dialog("请选择目标面", "目标面", UF_UI_SEL_SCOPE_ANY_IN_ASSEMBLY, init_proc, NULL, &response, &baseSurfaceTag, cursor, &viewTag);
 
-
-
 	/*2.选取中心点*/
 
-	/*3.选取切削方向（顺时针，逆时针）及点的分布（度数，半径上点的个数）*/
+//	使用了点收集器，应该使用点构造器
+/*
+	UF_UI_chained_points_t *centralPoint_t[1];
+	int centralPointsNum = 1;
+	UF_UI_select_point_collection("请选择中心点",false,centralPoint_t,&centralPointsNum,&response);
 
+//测试
+	UF_UI_open_listing_window();
+	char pointCoordinates[20];
+	sprintf(pointCoordinates, "%.3f %.3f %.3f\n", centralPoint_t[0]->pt[0], centralPoint_t[0]->pt[1], centralPoint_t[0]->pt[2]);
+	UF_UI_write_listing_window(pointCoordinates);
+*/
+
+	UF_UI_POINT_base_method_t pointConstrustMethod = UF_UI_POINT_NO_METHOD;
+	tag_t centralPointTag;
+	double centralPoint[3] = {0.0,0.0,0.0};
+	UF_UI_point_construct("请选择中心点",&pointConstrustMethod,&centralPointTag,centralPoint,&response);
+
+//测试
+/*
+	UF_UI_open_listing_window();
+	char pointCoordinates[20];
+	sprintf(pointCoordinates, "%.3f %.3f %.3f\n",centralPoint[0],centralPoint[1],centralPoint[2]);
+	UF_UI_write_listing_window(pointCoordinates);
+*/
+
+	/*3.选取切削方向（顺时针，逆时针）及点的分布（uv点数）*/
+
+	char cuttingDirection[2][38] = { "顺时针","逆时针" };
+	int isClockwise = 5;
+	isClockwise = uc1603("请选择切削方向", 0, cuttingDirection, 2);
+
+//	创建面上的点所需要的uv参数为0-1，不需要查询面的参数（重构理由见下面）
+	double uvMinMax[4];
+	UF_MODL_ask_face_uv_minmax(baseSurfaceTag, uvMinMax);
+
+	char uvNumChar[2][16] = {"u向","v向"};
+	double uvNum[2] = { 11,11 };
+	uc1609("请选择u向v向点个数", uvNumChar, 2, uvNum, 0);
+
+//	测试对话框是否有效
+/*
+	UF_UI_open_listing_window();
+
+	char isClockwiseChar[5];
+	sprintf(isClockwiseChar, "%d \n", isClockwise);
+	UF_UI_write_listing_window(isClockwiseChar);
+
+	sprintf(uvNumChar[0], "%.0f %.0f\n", uvNum[0], uvNum[1]);
+	UF_UI_write_listing_window(uvNumChar[0]);
+
+	char uvMinMaxChar[50];
+	sprintf(uvMinMaxChar, "%.3f %.3f %.3f %.3f\n",uvMinMax[0],uvMinMax[1],uvMinMax[2],uvMinMax[3]);
+	UF_UI_write_listing_window(uvMinMaxChar);
+*/
+
+//	测试使用point create on surface函数，生成点太多可能会卡，尝试使用ask point on surface 重构
+/*
+	tag_t uTag = NULL_TAG;
+	tag_t vTag = NULL_TAG;
+	UF_SO_create_scalar_double(baseSurfaceTag, UF_SO_update_within_modeling, 0.2, &uTag);
+	UF_SO_create_scalar_double(baseSurfaceTag, UF_SO_update_within_modeling, 0.2, &vTag);
+
+	UF_UI_open_listing_window();
+
+	double testUV = 0;
+	UF_SO_ask_double_of_scalar(uTag, &testUV);
+	char testUVChar[10];
+	sprintf(testUVChar, "%.4f \n", testUV);
+	UF_UI_write_listing_window(testUVChar);
+	
+
+	tag_t testPoint = NULL_TAG;
+	UF_POINT_create_on_surface(baseSurfaceTag, uTag , vTag , &testPoint);
+*/
 	/*4.生成点的法向量并对其进行分解得到后角值得到最大后角*/
+
+	double uvParameter[2];
+	double ut, vt;
+	double uvPoint[3];
+	double uFirstDerivative[3];
+	double uSecondDerivative[3];
+	double vFirstDerivative[3];
+	double vSecondDerivative[3];
+	double normalDirection[3];
+	double curvatureRadius[2];
+	tag_t uvPointTag = NULL_TAG;
+	char uvPointChar[50];
+
+	//面上的点与中心连接所在平面法向量
+	double toolDirection[3] = { 0.0,0.0,0.0 };
+
+	//后角
+	double clearanceAngle;
+
+	UF_UI_open_listing_window();
+
+	for (i = 0; i <= uvNum[0]; i++)
+	{
+		ut = i / uvNum[0];
+		for (j = 0; j <= uvNum[1]; j++)
+		{
+			vt = j/uvNum[1];
+			uvParameter[0] = (uvMinMax[1] - uvMinMax[0])*ut + uvMinMax[0];
+			uvParameter[1] = (uvMinMax[3] - uvMinMax[2])*vt + uvMinMax[2];
+			UF_MODL_ask_face_props(baseSurfaceTag, uvParameter, uvPoint, uFirstDerivative, vFirstDerivative, uSecondDerivative, vSecondDerivative, normalDirection, curvatureRadius);
+			
+			//计算面上的点与中心连接所在平面的法向量
+			toolDirection[0] = uvPoint[1] - centralPoint[1];
+			toolDirection[1] = centralPoint[0] - uvPoint[0];
+
+			//计算后角
+			clearanceAngle = acos((toolDirection[0] * normalDirection[0] + toolDirection[1] * normalDirection[1] + toolDirection[2] * normalDirection[2]) / (sqrt(pow(toolDirection[0], 2) + pow(toolDirection[1], 2) + pow(toolDirection[2], 2))*sqrt(pow(normalDirection[0], 2) + pow(normalDirection[1], 2) + pow(normalDirection[2], 2))));
+			clearanceAngle = clearanceAngle > PI / 2 ? (clearanceAngle - PI / 2) : 0;
+			clearanceAngle = clearanceAngle / PI * 180;
+			
+			sprintf(uvPointChar, "%.4f %.4f %.4f %.4f \n", uvPoint[0], uvPoint[1], uvPoint[2], clearanceAngle);
+			UF_UI_write_listing_window(uvPointChar);
+			UF_CURVE_create_point(uvPoint, &uvPointTag);
+		}
+	}
 
 	/*5.后角可视化（生成对应点的后角生成的直线集合）*/
 
