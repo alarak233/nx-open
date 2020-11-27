@@ -201,6 +201,10 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 	double clearanceAngle;
 	double maxClearanceAngle = 0;
 	double minClearanceAngle = 0;
+	double maxClearanceAnglePoint[3] = { 0.0,0.0,0.0 };
+	double minClearanceAnglePoint[3] = { 0.0,0.0,0.0 };
+	tag_t maxClearanceAnglePointTag = NULL_TAG;
+	tag_t minClearanceAnglePointTag = NULL_TAG;
 
 	UF_UI_open_listing_window();
 
@@ -227,11 +231,24 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 				clearanceAngle = acos((toolDirection[0] * normalDirection[0] + toolDirection[1] * normalDirection[1] + toolDirection[2] * normalDirection[2]) / (sqrt(pow(toolDirection[0], 2) + pow(toolDirection[1], 2) + pow(toolDirection[2], 2))*sqrt(pow(normalDirection[0], 2) + pow(normalDirection[1], 2) + pow(normalDirection[2], 2))));
 				//clearanceAngle = clearanceAngle > PI / 2 ? clearanceAngle : PI-clearanceAngle ;
 				clearanceAngle = (clearanceAngle - PI / 2) / PI * 180;
-				maxClearanceAngle = clearanceAngle > maxClearanceAngle ? clearanceAngle : maxClearanceAngle;
-				minClearanceAngle = clearanceAngle < minClearanceAngle ? clearanceAngle : minClearanceAngle;
+				
+				if (clearanceAngle > maxClearanceAngle)
+				{
+					maxClearanceAngle = clearanceAngle;
+					maxClearanceAnglePoint[0] = uvPoint[0];
+					maxClearanceAnglePoint[1] = uvPoint[1];
+					maxClearanceAnglePoint[2] = uvPoint[2];
+				}
 
-				sprintf(uvPointChar, "%.4f %.4f %.4f %.4f \n", uvPoint[0], uvPoint[1], uvPoint[2], clearanceAngle);
-				UF_UI_write_listing_window(uvPointChar);
+				if (clearanceAngle < minClearanceAngle)
+				{
+					minClearanceAngle = clearanceAngle;
+					minClearanceAnglePoint[0] = uvPoint[0];
+					minClearanceAnglePoint[1] = uvPoint[1];
+					minClearanceAnglePoint[2] = uvPoint[2];
+				}
+				
+				//sprintf(uvPointChar, "%.4f %.4f %.4f %.4f \n", uvPoint[0], uvPoint[1], uvPoint[2], clearanceAngle);//输出点坐标和点的后角
 				//UF_CURVE_create_point(uvPoint, &uvPointTag);
 
 				//后角可视化
@@ -241,7 +258,6 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 				line.end_point[0] = uvPoint[0];
 				line.end_point[1] = uvPoint[1];
 				line.end_point[2] = -50 + clearanceAngle * 10;
-
 				UF_CURVE_create_line(&line, &lineTag);
 
 			}
@@ -253,7 +269,10 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 	sprintf(uvPointChar, "min clearance angle is %.4f  \n", minClearanceAngle);
 	UF_UI_write_listing_window(uvPointChar);	
 
-	/*5.后角可视化（生成对应点的后角生成的直线集合）*/
+	UF_CURVE_create_point(maxClearanceAnglePoint, &maxClearanceAnglePointTag);
+	UF_CURVE_create_point(minClearanceAnglePoint, &minClearanceAnglePointTag);
+
+	/*5.后角可视化（生成对应点的后角生成的直线集合）（已经整合在上面的模块）*/
 
     /* Terminate the API environment */
     UF_CALL(UF_terminate());
