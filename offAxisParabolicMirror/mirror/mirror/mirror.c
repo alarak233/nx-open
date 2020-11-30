@@ -184,10 +184,10 @@ extern DllExport void ufusr( char *parm, int *returnCode, int rlen )
 
 	tag_t cylinderTag = NULL_TAG;
 	int cylinderExpNumber = 0;
-	double cylinderOrgin[3] = { 0,0,0 };
+	double cylinderOrigin[3] = { 0,0,0 };
 	double cylinderDirection[3] = { 0,0,1 };
-	cylinderOrgin[0] = d;
-	UF_MODL_create_cylinder(0,NULL_TAG,cylinderOrgin,"h","2*r",cylinderDirection,&cylinderTag);
+	cylinderOrigin[0] = d;
+	UF_MODL_create_cylinder(0, NULL_TAG, cylinderOrigin, "h", "2*r", cylinderDirection, &cylinderTag);
 
 //	测试对话框，结果是圆柱只含两个表达式
 /*
@@ -253,11 +253,22 @@ extern DllExport void ufusr( char *parm, int *returnCode, int rlen )
 
 	UF_MODL_create_revolution(&parabolaTag, 1, &mirror, limit, offset, paraOrigin, false, true, axisPoints, axisDirection, UF_NEGATIVE, &mirrorTag, &mirrorNum);
 
-
-
 	/*6.创建新部件，工装*/
+	
+	char partToolName[100];
+	strcpy(partToolName, dirName);
+	strcat(partToolName, "tool.prt");
+	tag_t partToolTag = NULL_TAG;
+	UF_PART_new(partToolName, units, &partToolTag);
 
-	/*7.在工装中建模*/
+	/*7.在工装中建模(表达式在不同的部件中需要重新定义，所以这里直接采用字符串，以后可以测试关联)*/
+
+	double toolOrigin[3] = { 0.0,0.0,0.0 };
+	tag_t toolCylinderTag = NULL_TAG;
+	cylinderDirection[2] = -1.0;
+	char toolDiameter[20];
+	sprintf(toolDiameter, "%.5f", 2 * (d + r));
+	UF_MODL_create_cylinder(0, NULL_TAG, toolOrigin, "20", toolDiameter, cylinderDirection, &cylinderTag);
 
 	/*8.创建新部件粗车工件*/
 
