@@ -263,12 +263,17 @@ extern DllExport void ufusr( char *parm, int *returnCode, int rlen )
 
 	/*7.在工装中建模(表达式在不同的部件中需要重新定义，所以这里直接采用字符串，以后可以测试关联)*/
 
+	//建立基础圆柱
 	double toolOrigin[3] = { 0.0,0.0,0.0 };
 	tag_t toolCylinderTag = NULL_TAG;
 	cylinderDirection[2] = -1.0;
 	char toolDiameter[20];
 	sprintf(toolDiameter, "%.5f", 2 * (d + r));
 	UF_MODL_create_cylinder(0, NULL_TAG, toolOrigin, "20", toolDiameter, cylinderDirection, &cylinderTag);
+
+	//创建孔吸盘孔,打孔要选择基面，目前只能遍历圆柱面并且求面的tag
+	//UF_MODL_create_simple_hole();
+
 
 	/*8.创建新部件粗车工件*/
 
