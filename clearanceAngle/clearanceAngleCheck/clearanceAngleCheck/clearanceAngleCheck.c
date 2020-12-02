@@ -274,6 +274,12 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 
 	/*5.后角可视化（生成对应点的后角生成的直线集合）（已经整合在上面的模块）*/
 
+	/*6.额外功能，添加计算周向斜率以及径向斜率，周向斜率即后角，所以不计算*/
+	//由于uv向不一定是xy方向，所以不采用UF_MODL_ask_face_props生成的uv一二阶导数
+
+
+	/*7.额外功能，添加计算允许刀的最大圆弧半径*/
+
     /* Terminate the API environment */
     UF_CALL(UF_terminate());
 }
