@@ -206,6 +206,11 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 	tag_t maxClearanceAnglePointTag = NULL_TAG;
 	tag_t minClearanceAnglePointTag = NULL_TAG;
 
+	//向量积及法向斜率
+	double vectorProduct[3] = { 0.0,0.0,0.0 };
+	double radialAngle = 0.0;
+	double radialSlope = 0.0;
+
 	UF_UI_open_listing_window();
 
 	for (i = 0; i <= uvNum[0]; i++)
@@ -231,6 +236,10 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 				clearanceAngle = acos((toolDirection[0] * normalDirection[0] + toolDirection[1] * normalDirection[1] + toolDirection[2] * normalDirection[2]) / (sqrt(pow(toolDirection[0], 2) + pow(toolDirection[1], 2) + pow(toolDirection[2], 2))*sqrt(pow(normalDirection[0], 2) + pow(normalDirection[1], 2) + pow(normalDirection[2], 2))));
 				//clearanceAngle = clearanceAngle > PI / 2 ? clearanceAngle : PI-clearanceAngle ;
 				clearanceAngle = (clearanceAngle - PI / 2) / PI * 180;
+
+				//测试输出法向量(结果法向量均为单位向量)
+				//sprintf(uvPointChar, "%.6f %.6f %.6f\n", normalDirection[0], normalDirection[1], normalDirection[2]);
+				//UF_UI_write_listing_window(uvPointChar);
 				
 				if (clearanceAngle > maxClearanceAngle)
 				{
@@ -254,10 +263,30 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 				//后角可视化
 				line.start_point[0] = uvPoint[0];
 				line.start_point[1] = uvPoint[1];
-				line.start_point[2] = -50;
+				line.start_point[2] = -100;
 				line.end_point[0] = uvPoint[0];
 				line.end_point[1] = uvPoint[1];
-				line.end_point[2] = -50 + clearanceAngle * 10;
+				line.end_point[2] = -100 + clearanceAngle;
+				UF_CURVE_create_line(&line, &lineTag);
+
+				//计算周向斜率
+				//计算向量积
+				vectorProduct[0] = normalDirection[1] * toolDirection[2] - normalDirection[2] * toolDirection[1];
+				vectorProduct[1] = normalDirection[2] * toolDirection[0] - normalDirection[0] * toolDirection[2];
+				vectorProduct[2] = normalDirection[0] * toolDirection[1] - normalDirection[1] * toolDirection[0];
+
+				//计算向量积与z轴夹角
+				radialAngle = acos(vectorProduct[2] / sqrt(pow(vectorProduct[0], 2) + pow(vectorProduct[1], 2) + pow(vectorProduct[2], 2)));
+				radialAngle = PI / 2 - radialAngle;
+				radialAngle = radialAngle / PI * 180;
+				
+				//周向斜率可视化
+				line.start_point[0] = uvPoint[0];
+				line.start_point[1] = uvPoint[1];
+				line.start_point[2] = 100;
+				line.end_point[0] = uvPoint[0];
+				line.end_point[1] = uvPoint[1];
+				line.end_point[2] = 100 + radialAngle;
 				UF_CURVE_create_line(&line, &lineTag);
 
 			}
@@ -275,10 +304,10 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 	/*5.后角可视化（生成对应点的后角生成的直线集合）（已经整合在上面的模块）*/
 
 	/*6.额外功能，添加计算周向斜率以及径向斜率，周向斜率即后角，所以不计算*/
-	//由于uv向不一定是xy方向，所以不采用UF_MODL_ask_face_props生成的uv一二阶导数
-
+	//由于uv向不一定是xy方向，所以不采用UF_MODL_ask_face_props生成的uv一二阶导数，以继承在循环内
 
 	/*7.额外功能，添加计算允许刀的最大圆弧半径*/
+	//暂时不会用曲面的uv一二阶导数求曲率，只能暂时用平面切出的曲线求曲率并且通过主法线判断凹或凸
 
     /* Terminate the API environment */
     UF_CALL(UF_terminate());
