@@ -83,7 +83,6 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 	/* TODO: Add your application code here */
 
 	/*全局变量*/
-
 	int response;
 	int i = 0;
 	int j = 0;
@@ -211,6 +210,22 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 	double radialAngle = 0.0;
 	double radialSlope = 0.0;
 
+	//可视化中求选取面的最大范围
+	uvParameter[0] = uvMinMax[0];
+	uvParameter[1] = uvMinMax[2];
+	UF_MODL_ask_face_props(baseSurfaceTag, uvParameter, uvPoint, uFirstDerivative, vFirstDerivative, uSecondDerivative, vSecondDerivative, normalDirection, curvatureRadius);
+	double uvmin[2] = { 0.0,0.0 };
+	uvmin[0] = uvPoint[0];
+	uvmin[1] = uvPoint[1];
+	uvParameter[0] = uvMinMax[1];
+	uvParameter[1] = uvMinMax[3];
+	UF_MODL_ask_face_props(baseSurfaceTag, uvParameter, uvPoint, uFirstDerivative, vFirstDerivative, uSecondDerivative, vSecondDerivative, normalDirection, curvatureRadius);
+	double uvmax[2] = { 0.0,0.0 };
+	uvmax[0] = uvPoint[0];
+	uvmax[1] = uvPoint[1];
+	double maxd = 0.0;
+	maxd = sqrt(pow((uvmax[0] - uvmin[0]), 2) + pow((uvmax[0] - uvmin[0]), 2));
+
 	UF_UI_open_listing_window();
 
 	for (i = 0; i <= uvNum[0]; i++)
@@ -218,7 +233,7 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 		ut = i / uvNum[0];
 		for (j = 0; j <= uvNum[1]; j++)
 		{
-			vt = j/uvNum[1];
+			vt = j / uvNum[1];
 			uvParameter[0] = (uvMinMax[1] - uvMinMax[0])*ut + uvMinMax[0];
 			uvParameter[1] = (uvMinMax[3] - uvMinMax[2])*vt + uvMinMax[2];
 			UF_MODL_ask_face_props(baseSurfaceTag, uvParameter, uvPoint, uFirstDerivative, vFirstDerivative, uSecondDerivative, vSecondDerivative, normalDirection, curvatureRadius);
@@ -261,12 +276,12 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 				//UF_CURVE_create_point(uvPoint, &uvPointTag);
 
 				//后角可视化
-				line.start_point[0] = uvPoint[0];
+				line.start_point[0] = uvPoint[0] + 2 * maxd;
 				line.start_point[1] = uvPoint[1];
-				line.start_point[2] = -100;
-				line.end_point[0] = uvPoint[0];
+				line.start_point[2] = 0;
+				line.end_point[0] = uvPoint[0] + 2 * maxd;
 				line.end_point[1] = uvPoint[1];
-				line.end_point[2] = -100 + clearanceAngle;
+				line.end_point[2] = clearanceAngle;
 				UF_CURVE_create_line(&line, &lineTag);
 
 				//计算周向斜率
@@ -281,12 +296,12 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 				radialAngle = radialAngle / PI * 180;
 				
 				//周向斜率可视化
-				line.start_point[0] = uvPoint[0];
+				line.start_point[0] = uvPoint[0] + 4 * maxd;
 				line.start_point[1] = uvPoint[1];
-				line.start_point[2] = 100;
-				line.end_point[0] = uvPoint[0];
+				line.start_point[2] = 0;
+				line.end_point[0] = uvPoint[0] + 4 * maxd;
 				line.end_point[1] = uvPoint[1];
-				line.end_point[2] = 100 + radialAngle;
+				line.end_point[2] = radialAngle;
 				UF_CURVE_create_line(&line, &lineTag);
 
 			}
@@ -308,6 +323,100 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 
 	/*7.额外功能，添加计算允许刀的最大圆弧半径*/
 	//暂时不会用曲面的uv一二阶导数求曲率，只能暂时用平面切出的曲线求曲率并且通过主法线判断凹或凸
+
+	//基准平面法向量
+	double normalvector[3] = { 0.0,0.0,0.0 };
+	tag_t datumPlaneTag = NULL_TAG;
+	tag_t intersectionTag = NULL_TAG;
+
+	//相交曲线上的参数
+	double intersectionParameter = 0.0;
+	double intersectionPoint[3] = { 0.0,0.0,0.0 };
+	double intersectionTangent[3] = { 0.0,0.0,0.0 };
+	double intersectionPrincipalNormal[3] = { 0.0,0.0,0.0 };
+	double intersectionBinormal[3] = { 0.0,0.0,0.0 };
+	double intersectionTorsion = 0.0;
+	double intersectionRadious = 0.0;
+	double minRadious = 10000.0;
+
+	//
+	int curvesNum = 0;
+	tag_t *curvesTag;
+
+	for (i = 0; i < uvNum[0]; i++)
+	{
+		//创建基准平面
+		normalvector[0] = sin(i / uvNum[0] * PI);
+		normalvector[1] = cos(i / uvNum[0] * PI);
+		UF_MODL_create_fixed_dplane(centralPoint, normalvector, &datumPlaneTag);
+		
+		//求交线
+		UF_CURVE_create_int_object(1, &baseSurfaceTag, 1, &datumPlaneTag, &intersectionTag);
+
+		//求最小曲率半径
+		for (j = 0; j <= uvNum[1]; j++)
+		{
+			intersectionParameter = j / (uvNum[1]);
+
+			//！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
+			//类似与grip解组，要把曲线特征变为曲线对象，非常重要！！！！！！！！！！！
+			UF_CURVE_ask_feature_curves(intersectionTag, &curvesNum, &curvesTag);
+			//！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
+			
+			for (k = 0; k < curvesNum; k++)
+			{
+
+				UF_MODL_ask_curve_props(curvesTag[k], intersectionParameter, intersectionPoint, intersectionTangent, intersectionPrincipalNormal, intersectionBinormal, &intersectionTorsion, &intersectionRadious);
+				
+				//判断是否是凹的
+				if (intersectionPrincipalNormal[2] >= 0)
+				{
+					if (intersectionRadious < minRadious)
+					{
+						minRadious = intersectionRadious;
+					}
+
+					//正向可视化
+					line.start_point[0] = intersectionPoint[0] + 6 * maxd;
+					line.start_point[1] = intersectionPoint[1];
+					line.start_point[2] = 0;
+					line.end_point[0] = intersectionPoint[0] + 6 * maxd;
+					line.end_point[1] = intersectionPoint[1];
+					line.end_point[2] = 1000.0 / intersectionRadious;
+					UF_CURVE_create_line(&line, &lineTag);
+				}
+				else
+				{
+					//负向可视化
+					line.start_point[0] = intersectionPoint[0] + 6 * maxd;
+					line.start_point[1] = intersectionPoint[1];
+					line.start_point[2] = 0;
+					line.end_point[0] = intersectionPoint[0] + 6 * maxd;
+					line.end_point[1] = intersectionPoint[1];
+					line.end_point[2] = -1000.0 / intersectionRadious;
+					UF_CURVE_create_line(&line, &lineTag);
+				}
+			}
+
+			UF_free(curvesTag);
+			
+			//测试用
+			//sprintf(uvPointChar, "min radious is %.4f  \n", intersectionRadious);
+			//UF_UI_write_listing_window(uvPointChar);
+			
+		}
+	}
+
+	if (minRadious != 10000)
+	{
+		sprintf(uvPointChar, "min radious is %.4f  \n", minRadious);
+		UF_UI_write_listing_window(uvPointChar);
+	}
+	else
+	{
+		sprintf(uvPointChar, "min radious is too big");
+		UF_UI_write_listing_window(uvPointChar);
+	}
 
     /* Terminate the API environment */
     UF_CALL(UF_terminate());
