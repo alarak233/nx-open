@@ -17,6 +17,7 @@
 #include <uf_so.h>
 #include <uf_point.h>
 #include <uf_curve.h>
+#include <uf_obj.h>
 #include <math.h>
 
 static void ECHO(char *format, ...)
@@ -87,6 +88,8 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 	int i = 0;
 	int j = 0;
 	int k = 0;
+	int clearanceAngleColor = 2;
+	int radiaAngleColor = 150;
 
 	/*1.选取目标面*/
 
@@ -209,6 +212,12 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 	double vectorProduct[3] = { 0.0,0.0,0.0 };
 	double radialAngle = 0.0;
 	double radialSlope = 0.0;
+	double maxRadiaAngle = 0.0;
+	double minRadiaAngle = 0.0;
+	double maxRadiaAnglePoint[3] = { 0.0,0.0,0.0 };
+	double minRadiaAnglePoint[3] = { 0.0,0.0,0.0 };
+	tag_t maxRadiaAnglePointTag = NULL_TAG;
+	tag_t minRadiaAnglePointTag = NULL_TAG;
 
 	//可视化中求选取面的最大范围
 	uvParameter[0] = uvMinMax[0];
@@ -283,6 +292,7 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 				line.end_point[1] = uvPoint[1];
 				line.end_point[2] = clearanceAngle;
 				UF_CURVE_create_line(&line, &lineTag);
+				UF_OBJ_set_color(lineTag, clearanceAngleColor);
 
 				//计算周向斜率
 				//计算向量积
@@ -294,6 +304,22 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 				radialAngle = acos(vectorProduct[2] / sqrt(pow(vectorProduct[0], 2) + pow(vectorProduct[1], 2) + pow(vectorProduct[2], 2)));
 				radialAngle = PI / 2 - radialAngle;
 				radialAngle = radialAngle / PI * 180;
+
+				if (radialAngle > maxRadiaAngle)
+				{
+					maxRadiaAngle = radialAngle;
+					maxRadiaAnglePoint[0] = uvPoint[0];
+					maxRadiaAnglePoint[1] = uvPoint[1];
+					maxRadiaAnglePoint[2] = uvPoint[2];
+				}
+
+				if (radialAngle < minRadiaAngle)
+				{
+					minRadiaAngle = radialAngle;
+					minRadiaAnglePoint[0] = uvPoint[0];
+					minRadiaAnglePoint[1] = uvPoint[1];
+					minRadiaAnglePoint[2] = uvPoint[2];
+				}
 				
 				//周向斜率可视化
 				line.start_point[0] = uvPoint[0] + 4 * maxd;
@@ -303,6 +329,7 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 				line.end_point[1] = uvPoint[1];
 				line.end_point[2] = radialAngle;
 				UF_CURVE_create_line(&line, &lineTag);
+				UF_OBJ_set_color(lineTag, radiaAngleColor);
 
 			}
 		}
@@ -313,8 +340,21 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 	sprintf(uvPointChar, "min clearance angle is %.4f  \n", minClearanceAngle);
 	UF_UI_write_listing_window(uvPointChar);	
 
+	sprintf(uvPointChar, "max radial angle is %.4f  \n", maxRadiaAngle);
+	UF_UI_write_listing_window(uvPointChar);
+	sprintf(uvPointChar, "min radial angle is %.4f  \n", minRadiaAngle);
+	UF_UI_write_listing_window(uvPointChar);
+
 	UF_CURVE_create_point(maxClearanceAnglePoint, &maxClearanceAnglePointTag);
+	UF_OBJ_set_color(maxClearanceAnglePointTag, clearanceAngleColor);
 	UF_CURVE_create_point(minClearanceAnglePoint, &minClearanceAnglePointTag);
+	UF_OBJ_set_color(minClearanceAnglePointTag, clearanceAngleColor);
+
+	UF_CURVE_create_point(maxRadiaAnglePoint, &maxRadiaAnglePointTag);
+	UF_OBJ_set_color(maxRadiaAnglePointTag, radiaAngleColor);
+	UF_CURVE_create_point(minRadiaAnglePoint, &minRadiaAnglePointTag);
+	UF_OBJ_set_color(minRadiaAnglePointTag, radiaAngleColor);
+
 
 	/*5.后角可视化（生成对应点的后角生成的直线集合）（已经整合在上面的模块）*/
 
@@ -338,8 +378,10 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 	double intersectionTorsion = 0.0;
 	double intersectionRadious = 0.0;
 	double minRadious = 10000.0;
+	double minRadiousPoint[3] = { 0.0,0.0,0.0 };
+	tag_t minRadiousPointTag = NULL_TAG;
 
-	//
+	//曲线特征转对象
 	int curvesNum = 0;
 	tag_t *curvesTag;
 
@@ -374,6 +416,9 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 					if (intersectionRadious < minRadious)
 					{
 						minRadious = intersectionRadious;
+						minRadiousPoint[0] = intersectionPoint[0];
+						minRadiousPoint[1] = intersectionPoint[1];
+						minRadiousPoint[2] = intersectionPoint[2];
 					}
 
 					//正向可视化
@@ -411,6 +456,7 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 	{
 		sprintf(uvPointChar, "min radious is %.4f  \n", minRadious);
 		UF_UI_write_listing_window(uvPointChar);
+		UF_CURVE_create_point(minRadiousPoint, &minRadiousPointTag);
 	}
 	else
 	{
