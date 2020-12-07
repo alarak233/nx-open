@@ -88,8 +88,8 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 	int i = 0;
 	int j = 0;
 	int k = 0;
-	int clearanceAngleColor = 2;
-	int radiaAngleColor = 150;
+	int clearanceAngleColor = 186;//red
+	int radiaAngleColor = 211;//blue
 
 	/*1.选取目标面*/
 
@@ -385,6 +385,9 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 	int curvesNum = 0;
 	tag_t *curvesTag;
 
+	//删除数组记录的id
+	tag_t deleteTag[10000];
+
 	for (i = 0; i < uvNum[0]; i++)
 	{
 		//创建基准平面
@@ -394,6 +397,10 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 		
 		//求交线
 		UF_CURVE_create_int_object(1, &baseSurfaceTag, 1, &datumPlaneTag, &intersectionTag);
+
+		//记录要删除的tag
+		deleteTag[i] = intersectionTag;
+		deleteTag[i+(int)uvNum[0]] = datumPlaneTag;
 
 		//求最小曲率半径
 		for (j = 0; j <= uvNum[1]; j++)
@@ -451,6 +458,11 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 			
 		}
 	}
+
+	//删除辅助线辅助面
+	//UF_OBJ_delete_object(intersectionTag);
+	int *status;
+	UF_OBJ_delete_array_of_objects((int)(2 * uvNum[0]), deleteTag, &status);
 
 	if (minRadious != 10000)
 	{
