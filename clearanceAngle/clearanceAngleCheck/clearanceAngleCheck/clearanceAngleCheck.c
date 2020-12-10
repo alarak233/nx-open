@@ -22,40 +22,40 @@
 
 static void ECHO(char *format, ...)
 {
-    char msg[UF_UI_MAX_STRING_BUFSIZE];
-    va_list args;
-    va_start(args, format);
-    vsnprintf_s(msg, sizeof(msg), _TRUNCATE, format, args);
-    va_end(args);
-    UF_UI_open_listing_window();
-    UF_UI_write_listing_window(msg);
-    UF_print_syslog(msg, FALSE);
+	char msg[UF_UI_MAX_STRING_BUFSIZE];
+	va_list args;
+	va_start(args, format);
+	vsnprintf_s(msg, sizeof(msg), _TRUNCATE, format, args);
+	va_end(args);
+	UF_UI_open_listing_window();
+	UF_UI_write_listing_window(msg);
+	UF_print_syslog(msg, FALSE);
 }
 
 #define UF_CALL(X) (report_error( __FILE__, __LINE__, #X, (X)))
 
-static int report_error( char *file, int line, char *call, int irc)
+static int report_error(char *file, int line, char *call, int irc)
 {
-    if (irc)
-    {
-        char err[133];
+	if (irc)
+	{
+		char err[133];
 
-        UF_get_fail_message(irc, err);
-        ECHO("*** ERROR code %d at line %d in %s:\n",
-            irc, line, file);
-        ECHO("+++ %s\n", err);
-        ECHO("%s;\n", call);
-    }
+		UF_get_fail_message(irc, err);
+		ECHO("*** ERROR code %d at line %d in %s:\n",
+			irc, line, file);
+		ECHO("+++ %s\n", err);
+		ECHO("%s;\n", call);
+	}
 
-    return(irc);
+	return(irc);
 }
 /*选取特定的特征过滤器初始化*/
 static int init_proc(UF_UI_selection_p_t select, void *user_data)
 {
 	int  errorCode = 0;
 	int numTriples = 1;
-	UF_UI_mask_t mask_triples[] = { UF_face_type,0,0};
-	errorCode = UF_UI_set_sel_mask(select,UF_UI_SEL_MASK_CLEAR_AND_ENABLE_SPECIFIC,numTriples, mask_triples);
+	UF_UI_mask_t mask_triples[] = { UF_face_type,0,0 };
+	errorCode = UF_UI_set_sel_mask(select, UF_UI_SEL_MASK_CLEAR_AND_ENABLE_SPECIFIC, numTriples, mask_triples);
 	if (errorCode == 0)
 	{
 		return UF_UI_SEL_SUCCESS;
@@ -88,15 +88,22 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 	int i = 0;
 	int j = 0;
 	int k = 0;
+	int l = 0;
 	int clearanceAngleColor = 186;//red
 	int radiaAngleColor = 211;//blue
 
-	/*1.选取目标面*/
+	/*1.选取目标面*///尝试选择多个面
 
-	tag_t baseSurfaceTag = NULL_TAG;
+	tag_t *baseSurfaceTag = NULL_TAG;
 	tag_t viewTag = NULL_TAG;
 	double cursor[3] = { 0.0,0.0,0.0 };
-	UF_UI_select_with_single_dialog("请选择目标面", "目标面", UF_UI_SEL_SCOPE_ANY_IN_ASSEMBLY, init_proc, NULL, &response, &baseSurfaceTag, cursor, &viewTag);
+	int faceNum = 0;
+
+	//选取单个面
+	//UF_UI_select_with_single_dialog("请选择目标面", "目标面", UF_UI_SEL_SCOPE_ANY_IN_ASSEMBLY, init_proc, NULL, &response, &baseSurfaceTag[0], cursor, &viewTag);
+
+	//选取多个面
+	UF_UI_select_with_class_dialog("请选择目标面", "目标面", UF_UI_SEL_SCOPE_ANY_IN_ASSEMBLY, init_proc, NULL, &response, &faceNum, &baseSurfaceTag);
 
 	/*2.选取中心点*/
 
@@ -115,16 +122,16 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 
 	UF_UI_POINT_base_method_t pointConstrustMethod = UF_UI_POINT_NO_METHOD;
 	tag_t centralPointTag;
-	double centralPoint[3] = {0.0,0.0,0.0};
-	UF_UI_point_construct("请选择中心点",&pointConstrustMethod,&centralPointTag,centralPoint,&response);
+	double centralPoint[3] = { 0.0,0.0,0.0 };
+	UF_UI_point_construct("请选择中心点", &pointConstrustMethod, &centralPointTag, centralPoint, &response);
 
-//测试
-/*
-	UF_UI_open_listing_window();
-	char pointCoordinates[20];
-	sprintf(pointCoordinates, "%.3f %.3f %.3f\n",centralPoint[0],centralPoint[1],centralPoint[2]);
-	UF_UI_write_listing_window(pointCoordinates);
-*/
+	//测试
+	/*
+		UF_UI_open_listing_window();
+		char pointCoordinates[20];
+		sprintf(pointCoordinates, "%.3f %.3f %.3f\n",centralPoint[0],centralPoint[1],centralPoint[2]);
+		UF_UI_write_listing_window(pointCoordinates);
+	*/
 
 	/*3.选取切削方向（顺时针，逆时针）及点的分布（uv点数）*/
 
@@ -134,51 +141,14 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 	isClockwise = uc1603("请选择切削方向", 0, cuttingDirection, 2);
 */
 
-//	创建面上的点所需要的uv参数为0-1，不需要查询面的参数（重构理由见下面）
+//创建对话框
 	double uvMinMax[4];
-	UF_MODL_ask_face_uv_minmax(baseSurfaceTag, uvMinMax);
-
-	char uvNumChar[2][16] = {"u向","v向"};
+	char uvNumChar[2][16] = { "u向","v向" };
 	double uvNum[2] = { 51,51 };
 	uc1609("请选择u向v向点个数", uvNumChar, 2, uvNum, 0);
 
-//	测试对话框是否有效
-/*
-	UF_UI_open_listing_window();
-
-	char isClockwiseChar[5];
-	sprintf(isClockwiseChar, "%d \n", isClockwise);
-	UF_UI_write_listing_window(isClockwiseChar);
-
-	sprintf(uvNumChar[0], "%.0f %.0f\n", uvNum[0], uvNum[1]);
-	UF_UI_write_listing_window(uvNumChar[0]);
-
-	char uvMinMaxChar[50];
-	sprintf(uvMinMaxChar, "%.3f %.3f %.3f %.3f\n",uvMinMax[0],uvMinMax[1],uvMinMax[2],uvMinMax[3]);
-	UF_UI_write_listing_window(uvMinMaxChar);
-*/
-
-//	测试使用point create on surface函数，生成点太多可能会卡，尝试使用ask point on surface 重构
-/*
-	tag_t uTag = NULL_TAG;
-	tag_t vTag = NULL_TAG;
-	UF_SO_create_scalar_double(baseSurfaceTag, UF_SO_update_within_modeling, 0.2, &uTag);
-	UF_SO_create_scalar_double(baseSurfaceTag, UF_SO_update_within_modeling, 0.2, &vTag);
-
-	UF_UI_open_listing_window();
-
-	double testUV = 0;
-	UF_SO_ask_double_of_scalar(uTag, &testUV);
-	char testUVChar[10];
-	sprintf(testUVChar, "%.4f \n", testUV);
-	UF_UI_write_listing_window(testUVChar);
-	
-
-	tag_t testPoint = NULL_TAG;
-	UF_POINT_create_on_surface(baseSurfaceTag, uTag , vTag , &testPoint);
-*/
-	/*4.生成点的法向量并对其进行分解得到后角值得到最大后角*/
-
+	//变量声明
+	//参数
 	double uvParameter[2];
 	double ut, vt;
 	double uvPoint[3];
@@ -219,126 +189,193 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 	tag_t maxRadiaAnglePointTag = NULL_TAG;
 	tag_t minRadiaAnglePointTag = NULL_TAG;
 
-	//可视化中求选取面的最大范围
-	uvParameter[0] = uvMinMax[0];
-	uvParameter[1] = uvMinMax[2];
-	UF_MODL_ask_face_props(baseSurfaceTag, uvParameter, uvPoint, uFirstDerivative, vFirstDerivative, uSecondDerivative, vSecondDerivative, normalDirection, curvatureRadius);
+	//计算最大范围辅助变量
+	double maxd = 0.0;
+	double maxdSum = 0;
+	double uvMinParameter[2] = { 0.0,0.0 };
+	double uvMaxParameter[2] = { 0.0,0.0 };
 	double uvmin[2] = { 0.0,0.0 };
+	double uvmax[2] = { 0.0,0.0 };
+	int uvminOrder = 0;
+	int uvmaxOrder = 0;
+
+	for (l = 0; l < faceNum; l++)
+	{
+		//可视化中求选取面的最大范围
+		UF_MODL_ask_face_uv_minmax(baseSurfaceTag[l], uvMinMax);
+		if (uvMinParameter[0] > uvMinMax[0] || uvMinParameter[1] > uvMinMax[2])
+		{
+			uvMinParameter[0] = uvMinMax[0];
+			uvMinParameter[1] = uvMinMax[2];
+			uvminOrder = l;
+		}
+		if (uvMaxParameter[0] < uvMinMax[1] || uvMaxParameter[1] < uvMinMax[3])
+		{
+			uvMaxParameter[0] = uvMinMax[1];
+			uvMaxParameter[1] = uvMinMax[3];
+			uvmaxOrder = l;
+		}
+	}
+	UF_MODL_ask_face_props(baseSurfaceTag[uvminOrder], uvMinParameter, uvPoint, uFirstDerivative, vFirstDerivative, uSecondDerivative, vSecondDerivative, normalDirection, curvatureRadius);
 	uvmin[0] = uvPoint[0];
 	uvmin[1] = uvPoint[1];
-	uvParameter[0] = uvMinMax[1];
-	uvParameter[1] = uvMinMax[3];
-	UF_MODL_ask_face_props(baseSurfaceTag, uvParameter, uvPoint, uFirstDerivative, vFirstDerivative, uSecondDerivative, vSecondDerivative, normalDirection, curvatureRadius);
-	double uvmax[2] = { 0.0,0.0 };
+
+	UF_MODL_ask_face_props(baseSurfaceTag[uvmaxOrder], uvMaxParameter, uvPoint, uFirstDerivative, vFirstDerivative, uSecondDerivative, vSecondDerivative, normalDirection, curvatureRadius);
 	uvmax[0] = uvPoint[0];
 	uvmax[1] = uvPoint[1];
-	double maxd = 0.0;
 	maxd = sqrt(pow((uvmax[0] - uvmin[0]), 2) + pow((uvmax[0] - uvmin[0]), 2));
+	maxdSum = maxd;
 
-	UF_UI_open_listing_window();
 
-	for (i = 0; i <= uvNum[0]; i++)
+	for (l = 0; l < faceNum; l++)
 	{
-		ut = i / uvNum[0];
-		for (j = 0; j <= uvNum[1]; j++)
+
+		UF_MODL_ask_face_uv_minmax(baseSurfaceTag[l], uvMinMax);
+
+
+		//	测试对话框是否有效
+		/*
+			UF_UI_open_listing_window();
+
+			char isClockwiseChar[5];
+			sprintf(isClockwiseChar, "%d \n", isClockwise);
+			UF_UI_write_listing_window(isClockwiseChar);
+
+			sprintf(uvNumChar[0], "%.0f %.0f\n", uvNum[0], uvNum[1]);
+			UF_UI_write_listing_window(uvNumChar[0]);
+
+			char uvMinMaxChar[50];
+			sprintf(uvMinMaxChar, "%.3f %.3f %.3f %.3f\n",uvMinMax[0],uvMinMax[1],uvMinMax[2],uvMinMax[3]);
+			UF_UI_write_listing_window(uvMinMaxChar);
+		*/
+
+		//	测试使用point create on surface函数，生成点太多可能会卡，尝试使用ask point on surface 重构
+		/*
+			tag_t uTag = NULL_TAG;
+			tag_t vTag = NULL_TAG;
+			UF_SO_create_scalar_double(baseSurfaceTag[l], UF_SO_update_within_modeling, 0.2, &uTag);
+			UF_SO_create_scalar_double(baseSurfaceTag[l], UF_SO_update_within_modeling, 0.2, &vTag);
+
+			UF_UI_open_listing_window();
+
+			double testUV = 0;
+			UF_SO_ask_double_of_scalar(uTag, &testUV);
+			char testUVChar[10];
+			sprintf(testUVChar, "%.4f \n", testUV);
+			UF_UI_write_listing_window(testUVChar);
+
+
+			tag_t testPoint = NULL_TAG;
+			UF_POINT_create_on_surface(baseSurfaceTag[l], uTag , vTag , &testPoint);
+		*/
+		/*4.生成点的法向量并对其进行分解得到后角值得到最大后角*/
+
+		UF_UI_open_listing_window();
+
+		for (i = 0; i <= uvNum[0]; i++)
 		{
-			vt = j / uvNum[1];
-			uvParameter[0] = (uvMinMax[1] - uvMinMax[0])*ut + uvMinMax[0];
-			uvParameter[1] = (uvMinMax[3] - uvMinMax[2])*vt + uvMinMax[2];
-			UF_MODL_ask_face_props(baseSurfaceTag, uvParameter, uvPoint, uFirstDerivative, vFirstDerivative, uSecondDerivative, vSecondDerivative, normalDirection, curvatureRadius);
-			
-			//判断点是否在面上
-			UF_MODL_ask_point_containment(uvPoint, baseSurfaceTag, &isPointOnSurface);
-			
-			if (isPointOnSurface==1)
+			ut = i / uvNum[0];
+			for (j = 0; j <= uvNum[1]; j++)
 			{
-				//计算面上的点与中心连接所在平面的法向量
-				toolDirection[0] = uvPoint[1] - centralPoint[1];
-				toolDirection[1] = centralPoint[0] - uvPoint[0];
+				vt = j / uvNum[1];
+				ut = ut * 0.999 + 0.0005;
+				vt = vt * 0.999 + 0.0005;
+				uvParameter[0] = (uvMinMax[1] - uvMinMax[0])*ut + uvMinMax[0];
+				uvParameter[1] = (uvMinMax[3] - uvMinMax[2])*vt + uvMinMax[2];
+				UF_MODL_ask_face_props(baseSurfaceTag[l], uvParameter, uvPoint, uFirstDerivative, vFirstDerivative, uSecondDerivative, vSecondDerivative, normalDirection, curvatureRadius);
 
-				//计算后角
-				clearanceAngle = acos((toolDirection[0] * normalDirection[0] + toolDirection[1] * normalDirection[1] + toolDirection[2] * normalDirection[2]) / (sqrt(pow(toolDirection[0], 2) + pow(toolDirection[1], 2) + pow(toolDirection[2], 2))*sqrt(pow(normalDirection[0], 2) + pow(normalDirection[1], 2) + pow(normalDirection[2], 2))));
-				//clearanceAngle = clearanceAngle > PI / 2 ? clearanceAngle : PI-clearanceAngle ;
-				clearanceAngle = (clearanceAngle - PI / 2) / PI * 180;
+				//判断点是否在面上
+				UF_MODL_ask_point_containment(uvPoint, baseSurfaceTag[l], &isPointOnSurface);
 
-				//测试输出法向量(结果法向量均为单位向量)
-				//sprintf(uvPointChar, "%.6f %.6f %.6f\n", normalDirection[0], normalDirection[1], normalDirection[2]);
-				//UF_UI_write_listing_window(uvPointChar);
-				
-				if (clearanceAngle > maxClearanceAngle)
+				if (isPointOnSurface == 1)
 				{
-					maxClearanceAngle = clearanceAngle;
-					maxClearanceAnglePoint[0] = uvPoint[0];
-					maxClearanceAnglePoint[1] = uvPoint[1];
-					maxClearanceAnglePoint[2] = uvPoint[2];
+					//计算面上的点与中心连接所在平面的法向量
+					toolDirection[0] = uvPoint[1] - centralPoint[1];
+					toolDirection[1] = centralPoint[0] - uvPoint[0];
+
+					//计算后角
+					clearanceAngle = acos((toolDirection[0] * normalDirection[0] + toolDirection[1] * normalDirection[1] + toolDirection[2] * normalDirection[2]) / (sqrt(pow(toolDirection[0], 2) + pow(toolDirection[1], 2) + pow(toolDirection[2], 2))*sqrt(pow(normalDirection[0], 2) + pow(normalDirection[1], 2) + pow(normalDirection[2], 2))));
+					//clearanceAngle = clearanceAngle > PI / 2 ? clearanceAngle : PI-clearanceAngle ;
+					clearanceAngle = (clearanceAngle - PI / 2) / PI * 180;
+
+					//测试输出法向量(结果法向量均为单位向量)
+					//sprintf(uvPointChar, "%.6f %.6f %.6f\n", normalDirection[0], normalDirection[1], normalDirection[2]);
+					//UF_UI_write_listing_window(uvPointChar);
+
+					if (clearanceAngle > maxClearanceAngle)
+					{
+						maxClearanceAngle = clearanceAngle;
+						maxClearanceAnglePoint[0] = uvPoint[0];
+						maxClearanceAnglePoint[1] = uvPoint[1];
+						maxClearanceAnglePoint[2] = uvPoint[2];
+					}
+
+					if (clearanceAngle < minClearanceAngle)
+					{
+						minClearanceAngle = clearanceAngle;
+						minClearanceAnglePoint[0] = uvPoint[0];
+						minClearanceAnglePoint[1] = uvPoint[1];
+						minClearanceAnglePoint[2] = uvPoint[2];
+					}
+
+					//sprintf(uvPointChar, "%.4f %.4f %.4f %.4f \n", uvPoint[0], uvPoint[1], uvPoint[2], clearanceAngle);//输出点坐标和点的后角
+					//UF_CURVE_create_point(uvPoint, &uvPointTag);
+
+					//后角可视化
+					line.start_point[0] = uvPoint[0] + 2 * maxdSum;
+					line.start_point[1] = uvPoint[1];
+					line.start_point[2] = 0;
+					line.end_point[0] = uvPoint[0] + 2 * maxdSum;
+					line.end_point[1] = uvPoint[1];
+					line.end_point[2] = clearanceAngle;
+					UF_CURVE_create_line(&line, &lineTag);
+					UF_OBJ_set_color(lineTag, clearanceAngleColor);
+
+					//计算周向斜率
+					//计算向量积
+					vectorProduct[0] = normalDirection[1] * toolDirection[2] - normalDirection[2] * toolDirection[1];
+					vectorProduct[1] = normalDirection[2] * toolDirection[0] - normalDirection[0] * toolDirection[2];
+					vectorProduct[2] = normalDirection[0] * toolDirection[1] - normalDirection[1] * toolDirection[0];
+
+					//计算向量积与z轴夹角
+					radialAngle = acos(vectorProduct[2] / sqrt(pow(vectorProduct[0], 2) + pow(vectorProduct[1], 2) + pow(vectorProduct[2], 2)));
+					radialAngle = PI / 2 - radialAngle;
+					radialAngle = radialAngle / PI * 180;
+
+					if (radialAngle > maxRadiaAngle)
+					{
+						maxRadiaAngle = radialAngle;
+						maxRadiaAnglePoint[0] = uvPoint[0];
+						maxRadiaAnglePoint[1] = uvPoint[1];
+						maxRadiaAnglePoint[2] = uvPoint[2];
+					}
+
+					if (radialAngle < minRadiaAngle)
+					{
+						minRadiaAngle = radialAngle;
+						minRadiaAnglePoint[0] = uvPoint[0];
+						minRadiaAnglePoint[1] = uvPoint[1];
+						minRadiaAnglePoint[2] = uvPoint[2];
+					}
+
+					//周向斜率可视化
+					line.start_point[0] = uvPoint[0] + 4 * maxdSum;
+					line.start_point[1] = uvPoint[1];
+					line.start_point[2] = 0;
+					line.end_point[0] = uvPoint[0] + 4 * maxdSum;
+					line.end_point[1] = uvPoint[1];
+					line.end_point[2] = radialAngle;
+					UF_CURVE_create_line(&line, &lineTag);
+					UF_OBJ_set_color(lineTag, radiaAngleColor);
+
 				}
-
-				if (clearanceAngle < minClearanceAngle)
-				{
-					minClearanceAngle = clearanceAngle;
-					minClearanceAnglePoint[0] = uvPoint[0];
-					minClearanceAnglePoint[1] = uvPoint[1];
-					minClearanceAnglePoint[2] = uvPoint[2];
-				}
-				
-				//sprintf(uvPointChar, "%.4f %.4f %.4f %.4f \n", uvPoint[0], uvPoint[1], uvPoint[2], clearanceAngle);//输出点坐标和点的后角
-				//UF_CURVE_create_point(uvPoint, &uvPointTag);
-
-				//后角可视化
-				line.start_point[0] = uvPoint[0] + 2 * maxd;
-				line.start_point[1] = uvPoint[1];
-				line.start_point[2] = 0;
-				line.end_point[0] = uvPoint[0] + 2 * maxd;
-				line.end_point[1] = uvPoint[1];
-				line.end_point[2] = clearanceAngle;
-				UF_CURVE_create_line(&line, &lineTag);
-				UF_OBJ_set_color(lineTag, clearanceAngleColor);
-
-				//计算周向斜率
-				//计算向量积
-				vectorProduct[0] = normalDirection[1] * toolDirection[2] - normalDirection[2] * toolDirection[1];
-				vectorProduct[1] = normalDirection[2] * toolDirection[0] - normalDirection[0] * toolDirection[2];
-				vectorProduct[2] = normalDirection[0] * toolDirection[1] - normalDirection[1] * toolDirection[0];
-
-				//计算向量积与z轴夹角
-				radialAngle = acos(vectorProduct[2] / sqrt(pow(vectorProduct[0], 2) + pow(vectorProduct[1], 2) + pow(vectorProduct[2], 2)));
-				radialAngle = PI / 2 - radialAngle;
-				radialAngle = radialAngle / PI * 180;
-
-				if (radialAngle > maxRadiaAngle)
-				{
-					maxRadiaAngle = radialAngle;
-					maxRadiaAnglePoint[0] = uvPoint[0];
-					maxRadiaAnglePoint[1] = uvPoint[1];
-					maxRadiaAnglePoint[2] = uvPoint[2];
-				}
-
-				if (radialAngle < minRadiaAngle)
-				{
-					minRadiaAngle = radialAngle;
-					minRadiaAnglePoint[0] = uvPoint[0];
-					minRadiaAnglePoint[1] = uvPoint[1];
-					minRadiaAnglePoint[2] = uvPoint[2];
-				}
-				
-				//周向斜率可视化
-				line.start_point[0] = uvPoint[0] + 4 * maxd;
-				line.start_point[1] = uvPoint[1];
-				line.start_point[2] = 0;
-				line.end_point[0] = uvPoint[0] + 4 * maxd;
-				line.end_point[1] = uvPoint[1];
-				line.end_point[2] = radialAngle;
-				UF_CURVE_create_line(&line, &lineTag);
-				UF_OBJ_set_color(lineTag, radiaAngleColor);
-
 			}
 		}
 	}
-
 	sprintf(uvPointChar, "max clearance angle is %.4f  \n", maxClearanceAngle);
 	UF_UI_write_listing_window(uvPointChar);
 	sprintf(uvPointChar, "min clearance angle is %.4f  \n", minClearanceAngle);
-	UF_UI_write_listing_window(uvPointChar);	
+	UF_UI_write_listing_window(uvPointChar);
 
 	sprintf(uvPointChar, "max radial angle is %.4f  \n", maxRadiaAngle);
 	UF_UI_write_listing_window(uvPointChar);
@@ -394,13 +431,13 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 		normalvector[0] = sin(i / uvNum[0] * PI);
 		normalvector[1] = cos(i / uvNum[0] * PI);
 		UF_MODL_create_fixed_dplane(centralPoint, normalvector, &datumPlaneTag);
-		
+
 		//求交线
-		UF_CURVE_create_int_object(1, &baseSurfaceTag, 1, &datumPlaneTag, &intersectionTag);
+		UF_CURVE_create_int_object(faceNum, baseSurfaceTag, 1, &datumPlaneTag, &intersectionTag);
 
 		//记录要删除的tag
 		deleteTag[i] = intersectionTag;
-		deleteTag[i+(int)uvNum[0]] = datumPlaneTag;
+		deleteTag[i + (int)uvNum[0]] = datumPlaneTag;
 
 		//求最小曲率半径
 		for (j = 0; j <= uvNum[1]; j++)
@@ -411,12 +448,12 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 			//类似与grip解组，要把曲线特征变为曲线对象，非常重要！！！！！！！！！！！
 			UF_CURVE_ask_feature_curves(intersectionTag, &curvesNum, &curvesTag);
 			//！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
-			
+
 			for (k = 0; k < curvesNum; k++)
 			{
 
 				UF_MODL_ask_curve_props(curvesTag[k], intersectionParameter, intersectionPoint, intersectionTangent, intersectionPrincipalNormal, intersectionBinormal, &intersectionTorsion, &intersectionRadious);
-				
+
 				//判断是否是凹的
 				if (intersectionPrincipalNormal[2] >= 0)
 				{
@@ -429,10 +466,10 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 					}
 
 					//正向可视化
-					line.start_point[0] = intersectionPoint[0] + 6 * maxd;
+					line.start_point[0] = intersectionPoint[0] + 6 * maxdSum;
 					line.start_point[1] = intersectionPoint[1];
 					line.start_point[2] = 0;
-					line.end_point[0] = intersectionPoint[0] + 6 * maxd;
+					line.end_point[0] = intersectionPoint[0] + 6 * maxdSum;
 					line.end_point[1] = intersectionPoint[1];
 					line.end_point[2] = 1000.0 / intersectionRadious;
 					UF_CURVE_create_line(&line, &lineTag);
@@ -440,10 +477,10 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 				else
 				{
 					//负向可视化
-					line.start_point[0] = intersectionPoint[0] + 6 * maxd;
+					line.start_point[0] = intersectionPoint[0] + 6 * maxdSum;
 					line.start_point[1] = intersectionPoint[1];
 					line.start_point[2] = 0;
-					line.end_point[0] = intersectionPoint[0] + 6 * maxd;
+					line.end_point[0] = intersectionPoint[0] + 6 * maxdSum;
 					line.end_point[1] = intersectionPoint[1];
 					line.end_point[2] = -1000.0 / intersectionRadious;
 					UF_CURVE_create_line(&line, &lineTag);
@@ -451,11 +488,11 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 			}
 
 			UF_free(curvesTag);
-			
+
 			//测试用
 			//sprintf(uvPointChar, "min radious is %.4f  \n", intersectionRadious);
 			//UF_UI_write_listing_window(uvPointChar);
-			
+
 		}
 	}
 
@@ -476,8 +513,8 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 		UF_UI_write_listing_window(uvPointChar);
 	}
 
-    /* Terminate the API environment */
-    UF_CALL(UF_terminate());
+	/* Terminate the API environment */
+	UF_CALL(UF_terminate());
 }
 
 /*****************************************************************************
@@ -489,8 +526,8 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 **     If your application registers a callback (from a MenuScript item or a
 **     User Defined Object for example), this function MUST return
 **     "UF_UNLOAD_UG_TERMINATE". */
-extern int ufusr_ask_unload( void )
+extern int ufusr_ask_unload(void)
 {
-    return( UF_UNLOAD_IMMEDIATELY );
+	return(UF_UNLOAD_IMMEDIATELY);
 }
 
