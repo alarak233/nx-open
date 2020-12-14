@@ -16,6 +16,8 @@
 #include <uf_curve.h>
 #include <math.h>
 
+#define  NUMBER_POINTS  5
+
 static void ECHO(char *format, ...)
 {
 	char msg[UF_UI_MAX_STRING_BUFSIZE];
@@ -162,14 +164,34 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 	double normalVectorProjectionLength = 0;
 	double normalVectorProjection[3] = { 0.0,0.0,0.0 };
 
+	//连接同一行的点的辅助变量
+	//UF_CURVE_create_spline_thru_pts用到的点结构体
+	UF_CURVE_pt_slope_crvatr_t splinePoints[2000];
+	//初始化
+	for (i = 0; i < 2000; i++)
+	{
+		splinePoints[i].slope_type = UF_CURVE_SLOPE_NONE;
+		splinePoints[i].crvatr_type = UF_CURVE_CRVATR_NONE;
+	}
+	splinePoints[0].slope_type = UF_CURVE_SLOPE_AUTO;
+	//一行在面上的点的个数
+	int splinePointNum = 0;
+
+	//曲线个数及标识符；
+	tag_t splineTag[2000];
+	int splineNum = 0;
+
 	for (l = 0; l < faceNum; l++)
 	{
 		UF_MODL_ask_face_uv_minmax(baseSurfaceTag[l], uvMinMax);
+		splineNum = 0;
 
 		for (i = 0; i <= uvNum[0]; i++)
 		{
+			splinePointNum = 0;
 			ut = i / uvNum[0];
 			ut = ut * 0.9999 + 0.00005;
+
 			for (j = 0; j <= uvNum[1]; j++)
 			{
 				vt = j / uvNum[1];
@@ -200,7 +222,7 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 					toolPlaneProjection[2] = normalDirection[2] - normalVectorProjection[2];
 					//根据刀具半径改变向量大小
 					toolDirectionLength = sqrt(pow(toolPlaneProjection[0], 2) + pow(toolPlaneProjection[1], 2) + pow(toolPlaneProjection[2], 2));
-					if (toolPlaneProjection[3]>0)
+					if (toolPlaneProjection[2] > 0)
 					{
 						toolPlaneProjection[0] = toolPlaneProjection[0] * uvNum[2] / toolDirectionLength;
 						toolPlaneProjection[1] = toolPlaneProjection[1] * uvNum[2] / toolDirectionLength;
@@ -211,7 +233,7 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 						toolPlaneProjection[0] = -toolPlaneProjection[0] * uvNum[2] / toolDirectionLength;
 						toolPlaneProjection[1] = -toolPlaneProjection[1] * uvNum[2] / toolDirectionLength;
 						toolPlaneProjection[2] = -toolPlaneProjection[2] * uvNum[2] / toolDirectionLength;
-					}					
+					}
 
 					//sprintf(uvPointChar, "%.4f %.4f %.4f %.4f \n", uvPoint[0], uvPoint[1], uvPoint[2], clearanceAngle);//输出点坐标和点的后角
 					//UF_CURVE_create_point(uvPoint, &uvPointTag);
@@ -224,7 +246,28 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 					line.end_point[1] = uvPoint[1] + toolPlaneProjection[1];
 					line.end_point[2] = uvPoint[2] + toolPlaneProjection[2];
 					UF_CURVE_create_line(&line, &lineTag);
+
+					//记录点坐标
+					splinePoints[splinePointNum].point[0] = line.end_point[0];
+					splinePoints[splinePointNum].point[1] = line.end_point[1];
+					splinePoints[splinePointNum].point[2] = line.end_point[2];
+
+					//曲率方向
+					//splinePoints[splinePointNum].crvatr[0] = -toolPlaneProjection[0];
+					//splinePoints[splinePointNum].crvatr[1] = -toolPlaneProjection[1];
+					//splinePoints[splinePointNum].crvatr[2] = -toolPlaneProjection[2];
+
+					//点计数
+					splinePointNum++;
+
 				}
+			}
+			if (splinePointNum > 1)
+			{
+				splinePoints[splinePointNum].slope_type = UF_CURVE_SLOPE_AUTO;
+				UF_CURVE_create_spline_thru_pts(3, 0, splinePointNum, splinePoints, NULL, 1, &splineTag[splineNum]);
+				splineNum++;
+				splinePoints[splinePointNum].slope_type = UF_CURVE_SLOPE_NONE;
 			}
 		}
 	}
