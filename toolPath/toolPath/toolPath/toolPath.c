@@ -184,7 +184,7 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 	for (l = 0; l < faceNum; l++)
 	{
 		UF_MODL_ask_face_uv_minmax(baseSurfaceTag[l], uvMinMax);
-		splineNum = 0;
+		//splineNum = 0;
 
 		for (i = 0; i <= uvNum[0]; i++)
 		{
@@ -265,14 +265,53 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 			if (splinePointNum > 1)
 			{
 				splinePoints[splinePointNum].slope_type = UF_CURVE_SLOPE_AUTO;
-				UF_CURVE_create_spline_thru_pts(3, 0, splinePointNum, splinePoints, NULL, 1, &splineTag[splineNum]);
+				UF_CURVE_create_spline_thru_pts(3, 0, splinePointNum, splinePoints, NULL, 1, &(splineTag[splineNum]));
 				splineNum++;
 				splinePoints[splinePointNum].slope_type = UF_CURVE_SLOPE_NONE;
 			}
 		}
 	}
 
-	UF_terminate();
+	//测试
+	/*
+	UF_UI_open_listing_window();
+	char test[20];
+	sprintf(test, "%d", splineNum);
+	UF_UI_write_listing_window(test);
+	*/
+
+	//定义曲线集合及初始化，为构造曲面做准备
+	UF_STRING_t splineList;
+	UF_STRING_t spineList;
+	UF_MODL_init_string_list(&splineList);
+	//UF_MODL_init_string_list(&spineList);
+	UF_MODL_create_string_list(splineNum, splineNum, &splineList);
+	//UF_MODL_create_string_list(splineNum, splineNum, &spineList);
+	splineList.num = splineNum;
+	tag_t *splineFeatures = 0;
+	int splineFeaturesNum = 0;
+	for (i = 0; i < splineNum; i++)
+	{
+		splineList.string[i] = 1;
+		splineList.dir[i] = UF_MODL_CURVE_START_FROM_BEGIN;
+		//UF_CURVE_ask_feature_curves(splineTag[i], &splineFeaturesNum, &splineFeatures);
+		splineList.id[i] = splineTag[i];
+	}
+	int patch = 2;
+	int alignment = 1;
+	double value[6] ;
+	int vdegreee = 3;
+	int vstatus = 0;
+	int bodytype = 1;
+	double tolerance[3] = { 0.000011,0.0001,0.1 };
+	tag_t neighborSurface[2] = { NULL_TAG,NULL_TAG };
+	int constraint[2] = { 0,0 };
+	tag_t finalSurface = NULL_TAG;
+
+	//创建网格曲面
+	UF_MODL_create_thru_curves(&splineList, &spineList, &patch, &alignment, value, &vdegreee, &vstatus, &bodytype, UF_NULLSIGN, tolerance, neighborSurface, constraint, &finalSurface);
+	UF_MODL_free_string_list(&splineList);
+	//UF_MODL_free_string_list(&spineList);
 
 	/* Terminate the API environment */
 	UF_CALL(UF_terminate());
