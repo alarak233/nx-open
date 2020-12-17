@@ -181,6 +181,12 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 	tag_t splineTag[2000];
 	int splineNum = 0;
 
+	//测试点
+	//tag_t pointTag = NULL_TAG;
+
+	//构造曲面用的点链表
+	UF_MODL_bsurf_row_info_t bsurfacePoints[2000];
+
 	for (l = 0; l < faceNum; l++)
 	{
 		UF_MODL_ask_face_uv_minmax(baseSurfaceTag[l], uvMinMax);
@@ -257,17 +263,27 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 					//splinePoints[splinePointNum].crvatr[1] = -toolPlaneProjection[1];
 					//splinePoints[splinePointNum].crvatr[2] = -toolPlaneProjection[2];
 
+					//测试输出点
+					//UF_CURVE_create_point(splinePoints[splinePointNum].point, &pointTag);
+
+					//记录点集，注意为一维数组
+					bsurfacePoints[splineNum].points[3 * splinePointNum] = splinePoints[splinePointNum].point[0];
+					bsurfacePoints[splineNum].points[3 * splinePointNum + 1] = splinePoints[splinePointNum].point[1];
+					bsurfacePoints[splineNum].points[3 * splinePointNum + 2] = splinePoints[splinePointNum].point[2];
+					bsurfacePoints[splineNum].weight[splinePointNum] = 1;
+
 					//点计数
 					splinePointNum++;
-
 				}
 			}
 			if (splinePointNum > 1)
 			{
 				splinePoints[splinePointNum].slope_type = UF_CURVE_SLOPE_AUTO;
 				UF_CURVE_create_spline_thru_pts(3, 0, splinePointNum, splinePoints, NULL, 1, &(splineTag[splineNum]));
+				bsurfacePoints[splineNum].num_points = splinePointNum;
 				splineNum++;
 				splinePoints[splinePointNum].slope_type = UF_CURVE_SLOPE_NONE;
+
 			}
 		}
 	}
@@ -299,7 +315,7 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 	}
 	int patch = 2;
 	int alignment = 1;
-	double value[6] ;
+	double value[6];
 	int vdegreee = 3;
 	int vstatus = 0;
 	int bodytype = 1;
@@ -312,6 +328,12 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 	UF_MODL_create_thru_curves(&splineList, &spineList, &patch, &alignment, value, &vdegreee, &vstatus, &bodytype, UF_NULLSIGN, tolerance, neighborSurface, constraint, &finalSurface);
 	UF_MODL_free_string_list(&splineList);
 	//UF_MODL_free_string_list(&spineList);
+
+	//尝试用点构造曲面
+	//辅助变量
+	tag_t bsurfaceTag = NULL_TAG;
+	//构造
+	UF_MODL_create_bsurf_thru_pts(1, 0, 0, 3, 3, splineNum, bsurfacePoints, &bsurfaceTag);
 
 	/* Terminate the API environment */
 	UF_CALL(UF_terminate());
