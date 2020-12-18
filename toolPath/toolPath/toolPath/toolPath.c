@@ -15,6 +15,7 @@
 #include <uf_modl.h>
 #include <uf_curve.h>
 #include <math.h>
+#include <stdlib.h>
 
 #define  NUMBER_POINTS  5
 
@@ -178,14 +179,29 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 	int splinePointNum = 0;
 
 	//曲线个数及标识符；
-	tag_t splineTag[2000];
+	//tag_t splineTag[2000];
 	int splineNum = 0;
 
 	//测试点
 	//tag_t pointTag = NULL_TAG;
 
-	//构造曲面用的点链表
-	UF_MODL_bsurf_row_info_t bsurfacePoints[2000];
+	//构造曲面用的点链表！！！需要分配内存！！！
+	UF_MODL_bsurf_row_info_t *bsurfacePoints;
+	bsurfacePoints = (UF_MODL_bsurf_row_info_t *)malloc((int)(uvNum[0]+1) * (int)sizeof(UF_MODL_bsurf_row_info_t));
+	for ( i = 0; i <=uvNum[0];i++)
+	{
+		bsurfacePoints[i].num_points = (int)uvNum[0];
+		bsurfacePoints[i].points = (double *)malloc((int)(uvNum[1]+1) *3* sizeof(double*));
+		bsurfacePoints[i].weight = (double *)malloc((int)(uvNum[1]+1) * sizeof(double*));
+	}
+
+	//测试内存分配
+	/*
+	UF_UI_open_listing_window();
+	char test[20];
+	sprintf(test, "%zd", sizeof(UF_MODL_bsurf_row_info_t));
+	UF_UI_write_listing_window(test);
+	*/
 
 	for (l = 0; l < faceNum; l++)
 	{
@@ -251,12 +267,12 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 					line.end_point[0] = uvPoint[0] + toolPlaneProjection[0];
 					line.end_point[1] = uvPoint[1] + toolPlaneProjection[1];
 					line.end_point[2] = uvPoint[2] + toolPlaneProjection[2];
-					UF_CURVE_create_line(&line, &lineTag);
+					//UF_CURVE_create_line(&line, &lineTag);
 
 					//记录点坐标
-					splinePoints[splinePointNum].point[0] = line.end_point[0];
-					splinePoints[splinePointNum].point[1] = line.end_point[1];
-					splinePoints[splinePointNum].point[2] = line.end_point[2];
+					//splinePoints[splinePointNum].point[0] = line.end_point[0];
+					//splinePoints[splinePointNum].point[1] = line.end_point[1];
+					//splinePoints[splinePointNum].point[2] = line.end_point[2];
 
 					//曲率方向
 					//splinePoints[splinePointNum].crvatr[0] = -toolPlaneProjection[0];
@@ -267,9 +283,9 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 					//UF_CURVE_create_point(splinePoints[splinePointNum].point, &pointTag);
 
 					//记录点集，注意为一维数组
-					bsurfacePoints[splineNum].points[3 * splinePointNum] = splinePoints[splinePointNum].point[0];
-					bsurfacePoints[splineNum].points[3 * splinePointNum + 1] = splinePoints[splinePointNum].point[1];
-					bsurfacePoints[splineNum].points[3 * splinePointNum + 2] = splinePoints[splinePointNum].point[2];
+					bsurfacePoints[splineNum].points[3 * splinePointNum] = line.end_point[0];
+					bsurfacePoints[splineNum].points[3 * splinePointNum + 1] = line.end_point[1];
+					bsurfacePoints[splineNum].points[3 * splinePointNum + 2] = line.end_point[2];
 					bsurfacePoints[splineNum].weight[splinePointNum] = 1;
 
 					//点计数
@@ -279,7 +295,7 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 			if (splinePointNum > 1)
 			{
 				splinePoints[splinePointNum].slope_type = UF_CURVE_SLOPE_AUTO;
-				UF_CURVE_create_spline_thru_pts(3, 0, splinePointNum, splinePoints, NULL, 1, &(splineTag[splineNum]));
+				//UF_CURVE_create_spline_thru_pts(3, 0, splinePointNum, splinePoints, NULL, 1, &(splineTag[splineNum]));
 				bsurfacePoints[splineNum].num_points = splinePointNum;
 				splineNum++;
 				splinePoints[splinePointNum].slope_type = UF_CURVE_SLOPE_NONE;
@@ -295,7 +311,7 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 	sprintf(test, "%d", splineNum);
 	UF_UI_write_listing_window(test);
 	*/
-
+	/*
 	//定义曲线集合及初始化，为构造曲面做准备
 	UF_STRING_t splineList;
 	UF_STRING_t spineList;
@@ -328,12 +344,20 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 	UF_MODL_create_thru_curves(&splineList, &spineList, &patch, &alignment, value, &vdegreee, &vstatus, &bodytype, UF_NULLSIGN, tolerance, neighborSurface, constraint, &finalSurface);
 	UF_MODL_free_string_list(&splineList);
 	//UF_MODL_free_string_list(&spineList);
-
+	*/
 	//尝试用点构造曲面
 	//辅助变量
 	tag_t bsurfaceTag = NULL_TAG;
 	//构造
 	UF_MODL_create_bsurf_thru_pts(1, 0, 0, 3, 3, splineNum, bsurfacePoints, &bsurfaceTag);
+
+	//释放内存
+	for (i = 0; i <=uvNum[0]; i++)
+	{
+		free(bsurfacePoints[i].points);
+		free(bsurfacePoints[i].weight);
+	}
+	free(bsurfacePoints);
 
 	/* Terminate the API environment */
 	UF_CALL(UF_terminate());
