@@ -84,11 +84,14 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 	/* TODO: Add your application code here */
 
 	/*全局变量*/
+	//错误返回
 	int response;
+
 	int i = 0;
 	int j = 0;
 	int k = 0;
 	int l = 0;
+
 	int clearanceAngleColor = 186;//red
 	int radiaAngleColor = 211;//blue
 
@@ -141,7 +144,7 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 	isClockwise = uc1603("请选择切削方向", 0, cuttingDirection, 2);
 */
 
-//创建对话框
+    //创建对话框
 	double uvMinMax[4];
 	char uvNumChar[2][16] = { "u向","v向" };
 	double uvNum[2] = { 51,51 };
@@ -322,16 +325,16 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 					//UF_CURVE_create_point(uvPoint, &uvPointTag);
 
 					//后角可视化
-					line.start_point[0] = uvPoint[0] + 2 * maxdSum;
+					line.start_point[0] = uvPoint[0] + 6 * maxdSum;
 					line.start_point[1] = uvPoint[1];
 					line.start_point[2] = 0;
-					line.end_point[0] = uvPoint[0] + 2 * maxdSum;
+					line.end_point[0] = uvPoint[0] + 6 * maxdSum;
 					line.end_point[1] = uvPoint[1];
 					line.end_point[2] = clearanceAngle;
 					UF_CURVE_create_line(&line, &lineTag);
 					UF_OBJ_set_color(lineTag, clearanceAngleColor);
 
-					//计算周向斜率
+					//计算径向斜率
 					//计算向量积
 					vectorProduct[0] = normalDirection[1] * toolDirection[2] - normalDirection[2] * toolDirection[1];
 					vectorProduct[1] = normalDirection[2] * toolDirection[0] - normalDirection[0] * toolDirection[2];
@@ -372,16 +375,17 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 			}
 		}
 	}
+	/*
 	sprintf(uvPointChar, "max clearance angle is %.4f  \n", maxClearanceAngle);
 	UF_UI_write_listing_window(uvPointChar);
 	sprintf(uvPointChar, "min clearance angle is %.4f  \n", minClearanceAngle);
 	UF_UI_write_listing_window(uvPointChar);
-
+	
 	sprintf(uvPointChar, "max radial angle is %.4f  \n", maxRadiaAngle);
 	UF_UI_write_listing_window(uvPointChar);
 	sprintf(uvPointChar, "min radial angle is %.4f  \n", minRadiaAngle);
 	UF_UI_write_listing_window(uvPointChar);
-
+	
 	UF_CURVE_create_point(maxClearanceAnglePoint, &maxClearanceAnglePointTag);
 	UF_OBJ_set_color(maxClearanceAnglePointTag, clearanceAngleColor);
 	UF_CURVE_create_point(minClearanceAnglePoint, &minClearanceAnglePointTag);
@@ -391,7 +395,7 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 	UF_OBJ_set_color(maxRadiaAnglePointTag, radiaAngleColor);
 	UF_CURVE_create_point(minRadiaAnglePoint, &minRadiaAnglePointTag);
 	UF_OBJ_set_color(minRadiaAnglePointTag, radiaAngleColor);
-
+	*/
 
 	/*5.后角可视化（生成对应点的后角生成的直线集合）（已经整合在上面的模块）*/
 
@@ -466,10 +470,10 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 					}
 
 					//正向可视化
-					line.start_point[0] = intersectionPoint[0] + 6 * maxdSum;
+					line.start_point[0] = intersectionPoint[0] + 2 * maxdSum;
 					line.start_point[1] = intersectionPoint[1];
 					line.start_point[2] = 0;
-					line.end_point[0] = intersectionPoint[0] + 6 * maxdSum;
+					line.end_point[0] = intersectionPoint[0] + 2 * maxdSum;
 					line.end_point[1] = intersectionPoint[1];
 					line.end_point[2] = 1000.0 / intersectionRadious;
 					UF_CURVE_create_line(&line, &lineTag);
@@ -477,10 +481,10 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 				else
 				{
 					//负向可视化
-					line.start_point[0] = intersectionPoint[0] + 6 * maxdSum;
+					line.start_point[0] = intersectionPoint[0] + 2 * maxdSum;
 					line.start_point[1] = intersectionPoint[1];
 					line.start_point[2] = 0;
-					line.end_point[0] = intersectionPoint[0] + 6 * maxdSum;
+					line.end_point[0] = intersectionPoint[0] + 2 * maxdSum;
 					line.end_point[1] = intersectionPoint[1];
 					line.end_point[2] = -1000.0 / intersectionRadious;
 					UF_CURVE_create_line(&line, &lineTag);
@@ -501,6 +505,7 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 	int *status;
 	UF_OBJ_delete_array_of_objects((int)(2 * uvNum[0]), deleteTag, &status);
 
+	
 	if (minRadious != 10000)
 	{
 		sprintf(uvPointChar, "min radious is %.4f  \n", minRadious);
