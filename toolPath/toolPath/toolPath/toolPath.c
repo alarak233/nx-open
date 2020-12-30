@@ -133,7 +133,7 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 	double uvMinMax[4];
 
 	char uvNumChar[3][16] = { "u向","v向" ,"刀具圆弧半径" };
-	double uvNum[3] = { 11,11,5 };
+	double uvNum[3] = { 51,51,3 };
 	uc1609("请选择u向v向点个数", uvNumChar, 3, uvNum, 0);
 
 	/*4.生成点的法向量并对其进行转换*/
@@ -218,11 +218,12 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 		UF_MODL_ask_face_props(baseSurfaceTag[l], uvParameter, uvPoint, uFirstDerivative, vFirstDerivative, uSecondDerivative, vSecondDerivative, normalDirection, curvatureRadius);
 		*/
 		//splineNum = 0;
+		/*
 		UF_UI_open_listing_window();
 		char test[40];
 		sprintf(test, "%.2f %.2f %.2f %.2f\n", uvMinMax[0], uvMinMax[1], uvMinMax[2], uvMinMax[3]);
 		UF_UI_write_listing_window(test);
-
+		*/
 		for (i = 1; i < uvNum[0]; i++)
 		{
 			splinePointNum = 0;
@@ -239,7 +240,7 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 				uvBaseParameter[1] = 0;
 
 				//尝试开始做补偿面极点优化以防止补偿面中心褶皱
-				for (m = 0; m < 10; m++)
+				for (m = 0; m < 1; m++)
 				{
 					UF_MODL_ask_face_props(baseSurfaceTag[l], uvParameter, uvPoint, uFirstDerivative, vFirstDerivative, uSecondDerivative, vSecondDerivative, normalDirection, curvatureRadius);
 
@@ -271,8 +272,8 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 							toolPlaneProjection[1] = toolPlaneProjection[1] * uvNum[2] / toolDirectionLength;
 							toolPlaneProjection[2] = toolPlaneProjection[2] * uvNum[2] / toolDirectionLength;
 
-							uvParameter[0] -= (toolPlaneProjection[0] - uvBaseParameter[0]) / 1000.0;
-							uvParameter[1] -= (toolPlaneProjection[1] - uvBaseParameter[1]) / 1000.0;
+							uvParameter[0] -= 0.999*(toolPlaneProjection[0] - uvBaseParameter[0]) / 1000.0;
+							uvParameter[1] -= 0.999*(toolPlaneProjection[1] - uvBaseParameter[1]) / 1000.0;
 						}
 						else
 						{
@@ -280,8 +281,8 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 							toolPlaneProjection[1] = -toolPlaneProjection[1] * uvNum[2] / toolDirectionLength;
 							toolPlaneProjection[2] = -toolPlaneProjection[2] * uvNum[2] / toolDirectionLength;
 
-							uvParameter[0] += (toolPlaneProjection[0] - uvBaseParameter[0]) / 1000.0;
-							uvParameter[1] -= (toolPlaneProjection[1] - uvBaseParameter[1]) / 1000.0;
+							uvParameter[0] += 0.999*(toolPlaneProjection[0] - uvBaseParameter[0]) / 1000.0;
+							uvParameter[1] -= 0.999*(toolPlaneProjection[1] - uvBaseParameter[1]) / 1000.0;
 						}
 
 						//测试
