@@ -236,11 +236,11 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 				vt = vt * 0.9999 + 0.00005;
 				uvParameter[0] = (uvMinMax[1] - uvMinMax[0])*ut + uvMinMax[0];
 				uvParameter[1] = (uvMinMax[3] - uvMinMax[2])*vt + uvMinMax[2];
-				uvBaseParameter[0] = 0;
-				uvBaseParameter[1] = 0;
+				uvBaseParameter[0] = uvParameter[0];
+				uvBaseParameter[1] = uvParameter[1];
 
 				//尝试开始做补偿面极点优化以防止补偿面中心褶皱
-				for (m = 0; m < 1; m++)
+				for (m = 0; m < 6; m++)
 				{
 					UF_MODL_ask_face_props(baseSurfaceTag[l], uvParameter, uvPoint, uFirstDerivative, vFirstDerivative, uSecondDerivative, vSecondDerivative, normalDirection, curvatureRadius);
 
@@ -272,8 +272,8 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 							toolPlaneProjection[1] = toolPlaneProjection[1] * uvNum[2] / toolDirectionLength;
 							toolPlaneProjection[2] = toolPlaneProjection[2] * uvNum[2] / toolDirectionLength;
 
-							uvParameter[0] -= 0.999*(toolPlaneProjection[0] - uvBaseParameter[0]) / 1000.0;
-							uvParameter[1] -= 0.999*(toolPlaneProjection[1] - uvBaseParameter[1]) / 1000.0;
+							uvParameter[0] = (-toolPlaneProjection[0] + uvBaseParameter[0]*2000) / 2000.0;
+							uvParameter[1] = (-toolPlaneProjection[1] + uvBaseParameter[1]*2000) / 2000.0;
 						}
 						else
 						{
@@ -281,8 +281,8 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 							toolPlaneProjection[1] = -toolPlaneProjection[1] * uvNum[2] / toolDirectionLength;
 							toolPlaneProjection[2] = -toolPlaneProjection[2] * uvNum[2] / toolDirectionLength;
 
-							uvParameter[0] += 0.999*(toolPlaneProjection[0] - uvBaseParameter[0]) / 1000.0;
-							uvParameter[1] -= 0.999*(toolPlaneProjection[1] - uvBaseParameter[1]) / 1000.0;
+							uvParameter[0] = (-toolPlaneProjection[0] + uvBaseParameter[0]*2000) / 2000.0;
+							uvParameter[1] = (-toolPlaneProjection[1] + uvBaseParameter[1]*2000) / 2000.0;
 						}
 
 						//测试
@@ -297,8 +297,6 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 					{
 						break;
 					}
-					uvBaseParameter[0] = toolPlaneProjection[0];
-					uvBaseParameter[1] = toolPlaneProjection[1];
 				}
 				if (isPointOnSurface == 1)
 				{
