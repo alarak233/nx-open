@@ -240,7 +240,7 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 				uvBaseParameter[1] = uvParameter[1];
 
 				//尝试开始做补偿面极点优化以防止补偿面中心褶皱
-				for (m = 0; m < 6; m++)
+				for (m = 0; m < 2; m++)
 				{
 					UF_MODL_ask_face_props(baseSurfaceTag[l], uvParameter, uvPoint, uFirstDerivative, vFirstDerivative, uSecondDerivative, vSecondDerivative, normalDirection, curvatureRadius);
 
