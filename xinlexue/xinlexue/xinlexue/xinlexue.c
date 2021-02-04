@@ -97,9 +97,9 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 	//微结构深度h
 	double h = 0.0;
 	//环深度
-	double ch = 0.00045;
+	double ch = 0.00051;
 	//环宽度
-	double cd = 0.061/2.0;
+	double cd = 0.065/2.0;
 
 	//获取对话框（一次只能获取12个，分两次）
 
@@ -417,8 +417,8 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 	{
 		circle[i].matrix_tag = matrixTag;
 		circle[i].radius = r0;
-		circle[i].start_angle = 0 * DEGRA;
-		circle[i].end_angle = 360 * DEGRA;
+		circle[i].start_angle = 1 * DEGRA;
+		circle[i].end_angle = 361 * DEGRA;
 		circle[i].arc_center[0] = (i / 2.0 + 3.45)*d*rParameter;
 		circle[i].arc_center[2] = 0.0;
 		circle[i].arc_center[1] = Rcenter[2] - sqrt(pow(R + ch - r0, 2) - pow(circle[i].arc_center[0], 2));
