@@ -375,7 +375,7 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 			}
 		}
 	}
-	/*
+	
 	sprintf(uvPointChar, "max clearance angle is %.4f  \n", maxClearanceAngle);
 	UF_UI_write_listing_window(uvPointChar);
 	sprintf(uvPointChar, "min clearance angle is %.4f  \n", minClearanceAngle);
@@ -395,7 +395,7 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 	UF_OBJ_set_color(maxRadiaAnglePointTag, radiaAngleColor);
 	UF_CURVE_create_point(minRadiaAnglePoint, &minRadiaAnglePointTag);
 	UF_OBJ_set_color(minRadiaAnglePointTag, radiaAngleColor);
-	*/
+	
 
 	/*5.后角可视化（生成对应点的后角生成的直线集合）（已经整合在上面的模块）*/
 
