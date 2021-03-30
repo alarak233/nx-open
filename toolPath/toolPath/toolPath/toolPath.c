@@ -210,6 +210,11 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 	UF_UI_write_listing_window(test);
 	*/
 
+	//二分法用的辅助变量
+	double minu, minv, midu, midv, maxu, maxv;
+	double endu, endv;
+	double uvBasePoint[2];
+
 	for (l = 0; l < faceNum; l++)
 	{
 		UF_MODL_ask_face_uv_minmax(baseSurfaceTag[l], uvMinMax);
@@ -218,12 +223,12 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 		UF_MODL_ask_face_props(baseSurfaceTag[l], uvParameter, uvPoint, uFirstDerivative, vFirstDerivative, uSecondDerivative, vSecondDerivative, normalDirection, curvatureRadius);
 		*/
 		//splineNum = 0;
-		/*
+		
 		UF_UI_open_listing_window();
 		char test[40];
 		sprintf(test, "%.2f %.2f %.2f %.2f\n", uvMinMax[0], uvMinMax[1], uvMinMax[2], uvMinMax[3]);
 		UF_UI_write_listing_window(test);
-		*/
+		
 		for (i = 1; i < uvNum[0]; i++)
 		{
 			splinePointNum = 0;
@@ -239,65 +244,147 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 				uvBaseParameter[0] = uvParameter[0];
 				uvBaseParameter[1] = uvParameter[1];
 
-				//尝试开始做补偿面极点优化以防止补偿面中心褶皱
-				for (m = 0; m < 2; m++)
-				{
-					UF_MODL_ask_face_props(baseSurfaceTag[l], uvParameter, uvPoint, uFirstDerivative, vFirstDerivative, uSecondDerivative, vSecondDerivative, normalDirection, curvatureRadius);
+				//判断点是否在面上
+				UF_MODL_ask_face_props(baseSurfaceTag[l], uvParameter, uvPoint, uFirstDerivative, vFirstDerivative, uSecondDerivative, vSecondDerivative, normalDirection, curvatureRadius);
+				UF_MODL_ask_point_containment(uvPoint, baseSurfaceTag[l], &isPointOnSurface);
+				uvBasePoint[0] = uvPoint[0];
+				uvBasePoint[1] = uvPoint[1];
+				if (isPointOnSurface == 1)
+				{			
+					//计算面上的点与中心连接所在平面的法向量
+					toolDirection[0] = uvPoint[1] - centralPoint[1];
+					toolDirection[1] = centralPoint[0] - uvPoint[0];
 
-					//判断点是否在面上
-					UF_MODL_ask_point_containment(uvPoint, baseSurfaceTag[l], &isPointOnSurface);
-
-					if (isPointOnSurface == 1)
+					//计算空间法向量在加工平面上的投影向量
+					//先计算法向量在平面法向量上的投影(toolDirection[2]=0,可以手动优化)
+					toolDirectionLength = sqrt(pow(toolDirection[0], 2) + pow(toolDirection[1], 2) + pow(toolDirection[2], 2));
+					normalVectorProjectionLength = (toolDirection[0] * normalDirection[0] + toolDirection[1] * normalDirection[1] + toolDirection[2] * normalDirection[2]) / toolDirectionLength;
+					normalVectorProjection[0] = toolDirection[0] * normalVectorProjectionLength / toolDirectionLength;
+					normalVectorProjection[1] = toolDirection[1] * normalVectorProjectionLength / toolDirectionLength;
+					normalVectorProjection[2] = toolDirection[2] * normalVectorProjectionLength / toolDirectionLength;
+					//然后计算在加工平面上的法向量
+					toolPlaneProjection[0] = normalDirection[0] - normalVectorProjection[0];
+					toolPlaneProjection[1] = normalDirection[1] - normalVectorProjection[1];
+					toolPlaneProjection[2] = normalDirection[2] - normalVectorProjection[2];
+					//根据刀具半径改变向量大小
+					if (toolPlaneProjection[2] < 0)
 					{
-						//计算面上的点与中心连接所在平面的法向量
-						toolDirection[0] = uvPoint[1] - centralPoint[1];
-						toolDirection[1] = centralPoint[0] - uvPoint[0];
+						toolPlaneProjection[0] = -toolPlaneProjection[0];
+						toolPlaneProjection[1] = -toolPlaneProjection[1];
+						toolPlaneProjection[2] = -toolPlaneProjection[2];
+					}
+					toolDirectionLength = sqrt(pow(toolPlaneProjection[0], 2) + pow(toolPlaneProjection[1], 2) + pow(toolPlaneProjection[2], 2));
+					toolPlaneProjection[0] = toolPlaneProjection[0] * uvNum[2] / toolDirectionLength;
+					toolPlaneProjection[1] = toolPlaneProjection[1] * uvNum[2] / toolDirectionLength;
+					toolPlaneProjection[2] = toolPlaneProjection[2] * uvNum[2] / toolDirectionLength;
+					//根据法向量正负计算min mid max u v	
+					if (toolPlaneProjection[0] > 0)
+					{
+						midu = uvPoint[0] - toolPlaneProjection[0];
+						maxu = uvPoint[0];
+						minu = uvPoint[0] - 2*toolPlaneProjection[0];
+					}
+					else
+					{
+						midu = uvPoint[0] + toolPlaneProjection[0];
+						minu = uvPoint[0];
+						maxu = uvPoint[0] + 2 * toolPlaneProjection[0];
+					}
+					if (toolPlaneProjection[1] > 0)
+					{
+						midv = uvPoint[1] - toolPlaneProjection[1];
+						maxv = uvPoint[1];
+						minv = uvPoint[1] -2* toolPlaneProjection[1];
+					}
+					else
+					{
+						midv = uvPoint[1] - toolPlaneProjection[1];
+						maxv = uvPoint[1];
+						maxv = uvPoint[1] - 2 * toolPlaneProjection[1];
+					}
+					//计算参数
+					uvParameter[0] = (midu- uvBasePoint[0]) / 1000.0+uvBaseParameter[0];
+					uvParameter[1] = (midv - uvBasePoint[1]) / 1000.0 + uvBaseParameter[1];
 
-						//计算空间法向量在加工平面上的投影向量
-						//先计算法向量在平面法向量上的投影(toolDirection[2]=0,可以手动优化)
-						toolDirectionLength = sqrt(pow(toolDirection[0], 2) + pow(toolDirection[1], 2) + pow(toolDirection[2], 2));
-						normalVectorProjectionLength = (toolDirection[0] * normalDirection[0] + toolDirection[1] * normalDirection[1] + toolDirection[2] * normalDirection[2]) / toolDirectionLength;
-						normalVectorProjection[0] = toolDirection[0] * normalVectorProjectionLength / toolDirectionLength;
-						normalVectorProjection[1] = toolDirection[1] * normalVectorProjectionLength / toolDirectionLength;
-						normalVectorProjection[2] = toolDirection[2] * normalVectorProjectionLength / toolDirectionLength;
-						//然后计算在加工平面上的法向量
-						toolPlaneProjection[0] = normalDirection[0] - normalVectorProjection[0];
-						toolPlaneProjection[1] = normalDirection[1] - normalVectorProjection[1];
-						toolPlaneProjection[2] = normalDirection[2] - normalVectorProjection[2];
-						//根据刀具半径改变向量大小
-						toolDirectionLength = sqrt(pow(toolPlaneProjection[0], 2) + pow(toolPlaneProjection[1], 2) + pow(toolPlaneProjection[2], 2));
-						if (toolPlaneProjection[2] > 0)
+					//尝试开始做补偿面极点优化以防止补偿面中心褶皱
+					for (m = 0; m < 1; m++)
+					{
+						//判断点是否在面上
+						UF_MODL_ask_face_props(baseSurfaceTag[l], uvParameter, uvPoint, uFirstDerivative, vFirstDerivative, uSecondDerivative, vSecondDerivative, normalDirection, curvatureRadius);
+						UF_MODL_ask_point_containment(uvPoint, baseSurfaceTag[l], &isPointOnSurface);
+
+						if (isPointOnSurface == 1)
 						{
+							//计算面上的点与中心连接所在平面的法向量
+							toolDirection[0] = uvPoint[1] - centralPoint[1];
+							toolDirection[1] = centralPoint[0] - uvPoint[0];
+
+							//计算空间法向量在加工平面上的投影向量
+							//先计算法向量在平面法向量上的投影(toolDirection[2]=0,可以手动优化)
+							toolDirectionLength = sqrt(pow(toolDirection[0], 2) + pow(toolDirection[1], 2) + pow(toolDirection[2], 2));
+							normalVectorProjectionLength = (toolDirection[0] * normalDirection[0] + toolDirection[1] * normalDirection[1] + toolDirection[2] * normalDirection[2]) / toolDirectionLength;
+							normalVectorProjection[0] = toolDirection[0] * normalVectorProjectionLength / toolDirectionLength;
+							normalVectorProjection[1] = toolDirection[1] * normalVectorProjectionLength / toolDirectionLength;
+							normalVectorProjection[2] = toolDirection[2] * normalVectorProjectionLength / toolDirectionLength;
+							//然后计算在加工平面上的法向量
+							toolPlaneProjection[0] = normalDirection[0] - normalVectorProjection[0];
+							toolPlaneProjection[1] = normalDirection[1] - normalVectorProjection[1];
+							toolPlaneProjection[2] = normalDirection[2] - normalVectorProjection[2];
+							//根据刀具半径改变向量大小
+							if (toolPlaneProjection[2] < 0)
+							{
+								toolPlaneProjection[0] = -toolPlaneProjection[0];
+								toolPlaneProjection[1] = -toolPlaneProjection[1];
+								toolPlaneProjection[2] = -toolPlaneProjection[2];
+							}
+							//根据刀具半径改变向量大小
+							toolDirectionLength = sqrt(pow(toolPlaneProjection[0], 2) + pow(toolPlaneProjection[1], 2) + pow(toolPlaneProjection[2], 2));
 							toolPlaneProjection[0] = toolPlaneProjection[0] * uvNum[2] / toolDirectionLength;
 							toolPlaneProjection[1] = toolPlaneProjection[1] * uvNum[2] / toolDirectionLength;
 							toolPlaneProjection[2] = toolPlaneProjection[2] * uvNum[2] / toolDirectionLength;
 
-							uvParameter[0] = (-toolPlaneProjection[0] + uvBaseParameter[0]*2000) / 2000.0;
-							uvParameter[1] = (-toolPlaneProjection[1] + uvBaseParameter[1]*2000) / 2000.0;
+							//根据二分法计算min mid max u v	
+							endu = uvPoint[0] + toolPlaneProjection[0];
+							endv = uvPoint[1] + toolPlaneProjection[1];
+							if (endu <= uvBasePoint[0])
+							{
+								maxu = midu;
+								midu = minu+0.5*(maxu-minu);
+							}
+							else
+							{
+								minu= midu;
+								midu = minu + 0.5*(maxu - minu);
+							}
+							if (endv <= uvBasePoint[1])
+							{
+								maxv = midv;
+								midv = minv + 0.5*(maxv - minv);
+							}
+							else
+							{
+								minv = midv;
+								midv = minv + 0.5*(maxv - minv);
+							}
+							//计算参数
+							uvParameter[0] = (midu - uvBasePoint[0]) / 1000.0 + uvBaseParameter[0];
+							uvParameter[1] = (midv - uvBasePoint[1]) / 1000.0 + uvBaseParameter[1];
+
+							//测试
+							/*
+							line.end_point[0] = uvPoint[0] + toolPlaneProjection[0];
+							line.end_point[1] = uvPoint[1] + toolPlaneProjection[1];
+							line.end_point[2] = uvPoint[2] + toolPlaneProjection[2];
+							UF_CURVE_create_point(line.end_point, &pointTag);
+							*/
 						}
 						else
 						{
-							toolPlaneProjection[0] = -toolPlaneProjection[0] * uvNum[2] / toolDirectionLength;
-							toolPlaneProjection[1] = -toolPlaneProjection[1] * uvNum[2] / toolDirectionLength;
-							toolPlaneProjection[2] = -toolPlaneProjection[2] * uvNum[2] / toolDirectionLength;
-
-							uvParameter[0] = (-toolPlaneProjection[0] + uvBaseParameter[0]*2000) / 2000.0;
-							uvParameter[1] = (-toolPlaneProjection[1] + uvBaseParameter[1]*2000) / 2000.0;
+							break;
 						}
-
-						//测试
-						/*
-						line.end_point[0] = uvPoint[0] + toolPlaneProjection[0];
-						line.end_point[1] = uvPoint[1] + toolPlaneProjection[1];
-						line.end_point[2] = uvPoint[2] + toolPlaneProjection[2];
-						UF_CURVE_create_point(line.end_point, &pointTag);
-						*/
-					}
-					else
-					{
-						break;
 					}
 				}
+
 				if (isPointOnSurface == 1)
 				{
 					//sprintf(uvPointChar, "%.4f %.4f %.4f %.4f \n", uvPoint[0], uvPoint[1], uvPoint[2], clearanceAngle);//输出点坐标和点的后角

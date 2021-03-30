@@ -1,2 +1,1 @@
-﻿  toolPath.c
-LINK : fatal error LNK1168: 无法打开 D:\nxopen\toolPath\toolPath\x64\Debug\/toolPath.dll 进行写入
+﻿  toolPath.vcxproj -> D:\nxopen\toolPath\toolPath\x64\Debug\toolPath.dll

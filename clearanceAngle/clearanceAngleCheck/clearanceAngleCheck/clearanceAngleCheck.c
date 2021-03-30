@@ -85,7 +85,7 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 
 	/*全局变量*/
 	//错误返回
-	int response;
+	int response = 0;
 
 	int i = 0;
 	int j = 0;
