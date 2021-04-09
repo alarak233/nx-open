@@ -101,8 +101,15 @@ extern DllExport void ufusr( char *parm, int *returnCode, int rlen )
 	/*2.输入反射光长度及光线密集程度*/
 	double uvMinMax[4];
 	char uvNumChar[3][16] = { "u向","v向" ,"反射光长度"};
-	double uvNum[3] = { 10,10,150 };
+	double uvNum[3] = { 10,10,500 };
 	uc1609("请输入光线密度", uvNumChar, 3, uvNum, 0);
+
+	/*2.1.添加了输入投影面的原点及法向量以创建投影面*/
+	char basePtChar[3][16] = { "x","y","z" };
+	double basePt[6] = { 0.0,-300.0,0.0 };
+	uc1609("请输入基点", basePtChar, 3, basePt, 0);
+	tag_t basePlane = NULL_TAG;
+	UF_MODL_create_plane(basePt, basePt, &basePlane);
 
 	/*3.计算最大uv值进行分配*/
 	//计算最大范围辅助变量
@@ -215,6 +222,9 @@ extern DllExport void ufusr( char *parm, int *returnCode, int rlen )
 					line.end_point[1] = uvPoint[1]+reflectionDirection[1] / len * uvNum[2];
 					line.end_point[2] = uvPoint[2]+reflectionDirection[2] / len * uvNum[2];
 					UF_CURVE_create_line(&line, &lineTag);
+
+					//创建与投影面的交点
+					//UF_POINT_create_surface_curve_intersection()
 				}
 				
 			}

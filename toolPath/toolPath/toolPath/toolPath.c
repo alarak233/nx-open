@@ -330,7 +330,7 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 							toolPlaneProjection[0] = normalDirection[0] - normalVectorProjection[0];
 							toolPlaneProjection[1] = normalDirection[1] - normalVectorProjection[1];
 							toolPlaneProjection[2] = normalDirection[2] - normalVectorProjection[2];
-							//根据刀具半径改变向量大小
+							//确定法向方向
 							if (toolPlaneProjection[2] < 0)
 							{
 								toolPlaneProjection[0] = -toolPlaneProjection[0];
@@ -346,7 +346,7 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 							//根据二分法计算min mid max u v	
 							endu = uvPoint[0] + toolPlaneProjection[0];
 							endv = uvPoint[1] + toolPlaneProjection[1];
-							if (endu <= uvBasePoint[0])
+							if (endu >= uvBasePoint[0])
 							{
 								maxu = midu;
 								midu = minu+0.5*(maxu-minu);
@@ -356,7 +356,7 @@ extern DllExport void ufusr(char *parm, int *returnCode, int rlen)
 								minu= midu;
 								midu = minu + 0.5*(maxu - minu);
 							}
-							if (endv <= uvBasePoint[1])
+							if (endv >= uvBasePoint[1])
 							{
 								maxv = midv;
 								midv = minv + 0.5*(maxv - minv);
