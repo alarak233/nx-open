@@ -16,6 +16,8 @@
 #include <uf_ui.h>
 #include <uf_modl.h>
 #include <uf_curve.h>
+#include <uf_point.h>
+#include <uf_obj.h>
 
 
 static void ECHO(char *format, ...)
@@ -177,6 +179,8 @@ extern DllExport void ufusr( char *parm, int *returnCode, int rlen )
 	//可视化用的直线
 	UF_CURVE_line_t line;
 	tag_t lineTag = NULL_TAG;
+	//创建交点辅助变量
+	tag_t interPtTag = NULL_TAG;
 	
 	for (l = 0; l < faceNum; l++)
 	{
@@ -224,9 +228,10 @@ extern DllExport void ufusr( char *parm, int *returnCode, int rlen )
 					UF_CURVE_create_line(&line, &lineTag);
 
 					//创建与投影面的交点
-					//UF_POINT_create_surface_curve_intersection()
+					UF_POINT_create_surface_curve_intersection(basePlane, lineTag, NULL_TAG, NULL_TAG, &interPtTag);
+					//颜色
+					UF_OBJ_set_color(interPtTag, 186);
 				}
-				
 			}
 		}
 	}
